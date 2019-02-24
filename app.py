@@ -5,7 +5,7 @@ import tweepy as tweepy
 from flask import Flask, jsonify
 from pyluach import dates, hebrewcal
 
-from app.progress_bar import ProgressBar
+from progress_bar import ProgressBar
 
 app = Flask(__name__)
 
