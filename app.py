@@ -1,12 +1,15 @@
 import os
 import re
+import traceback
 
 import tweepy as tweepy
 from flask import Flask, jsonify
 from pyluach import dates, hebrewcal
+from slackclient import SlackClient
 
 from progress_bar import ProgressBar
 
+sc = SlackClient(os.environ["SLACK_API_TOKEN"])
 app = Flask(__name__)
 
 CONSUMER_KEY = os.environ['CONSUMER_KEY']
@@ -19,7 +22,8 @@ def get_current_state():
     today = dates.HebrewDate.today()
     days_count = 0
     total_days = 0
-    if today.month >= 7:  # Tishrey and above
+    # Tishrey and above
+    if today.month >= 7:
         year = today.year
     else:
         year = today.year - 1
@@ -48,6 +52,14 @@ def get_last_state(text):
     return int(re.findall(r'\d+', text)[0])
 
 
+def send_slack_alert(msg):
+    sc.api_call(
+        "chat.postMessage",
+        channel="#hebrew-year-process",
+        text=msg
+    )
+
+
 @app.route('/tweet')
 def tweet():
     current_state = get_current_state()
@@ -62,12 +74,12 @@ def tweet():
     except IndexError:
         pass
     except Exception as e:
-        # error. log
-        pass
+        send_slack_alert("exception: " + repr(e) + "\n" + traceback.format_exc())
     is_tweeted = False
     if last_state is None or current_state > last_state:
         api.update_status(status=get_progress_bar(current_state))
         is_tweeted = True
+    send_slack_alert("Finish running. tweeted? -> " + str(is_tweeted))
     return jsonify(success=True, tweeted=is_tweeted)
 
 
