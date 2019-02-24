@@ -70,7 +70,7 @@ def tweet():
     api = tweepy.API(auth)
     last_state = None
     try:
-        last_state = get_last_state(api.home_timeline()[0].text)
+        last_state = get_last_state(api.user_timeline()[0].text)
     except IndexError:
         pass
     except Exception as e:
