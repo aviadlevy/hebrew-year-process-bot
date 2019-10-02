@@ -5,7 +5,6 @@ This bot publish the progress of the Hebrew calendar year.
   
 <div class="center">
 <blockquote class="twitter-tweet" data-lang="en"><p lang="und" dir="ltr">▓▓▓▓▓▓▓▓▓░░░░░░░░░░░ 43%</p>&mdash; Hebrew Year Progress (@yearProgressHeb) <a href="https://twitter.com/yearProgressHeb/status/1099773897254359040?ref_src=twsrc%5Etfw">February 24, 2019</a></blockquote>
-<script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 </div>
 
 ## TODO  
