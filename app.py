@@ -5,11 +5,11 @@ import traceback
 import tweepy as tweepy
 from flask import Flask, jsonify
 from pyluach import dates, hebrewcal
-from slackclient import SlackClient
+import slack
 
 from progress_bar import ProgressBar
 
-sc = SlackClient(os.environ["SLACK_API_TOKEN"])
+sc = slack.WebClient(os.environ["SLACK_API_TOKEN"])
 app = Flask(__name__)
 
 CONSUMER_KEY = os.environ['CONSUMER_KEY']
@@ -53,8 +53,7 @@ def get_last_state(text):
 
 
 def send_slack_alert(msg):
-    sc.api_call(
-        "chat.postMessage",
+    sc.chat_postMessage(
         channel="#hebrew-year-process",
         text=msg
     )
