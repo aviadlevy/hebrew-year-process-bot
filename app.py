@@ -76,7 +76,7 @@ def tweet():
     except Exception as e:
         send_slack_alert("exception: " + repr(e) + "\n" + traceback.format_exc())
     is_tweeted = False
-    if last_state is None or current_state > last_state:
+    if last_state is None or current_state > last_state or (last_state == 100 and current_state == 0):
         api.update_status(status=get_progress_bar(current_state))
         is_tweeted = True
     send_slack_alert("Finish running. tweeted? -> " + str(is_tweeted))
