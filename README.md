@@ -9,7 +9,7 @@ This bot publish the progress of the Hebrew calendar year.
 
 ## TODO  
 
-- [ ] Add tests
+- [X] ~~Add tests~~
 - [ ] Add full CI/CD
 - [X] ~~Add auto tweets on Jewish holidays~~
 - [X] ~~Get latest state, even when last tweet is not the state itself~~
