@@ -3,3 +3,4 @@ gunicorn==19.9.0
 pyluach==1.0.1
 slackclient==2.2.0
 tweepy==3.8.0
+pytest==5.2.1
