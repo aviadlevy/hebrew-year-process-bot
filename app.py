@@ -2,10 +2,10 @@ import os
 import re
 import traceback
 
-import tweepy as tweepy
-from flask import Flask, jsonify
-from pyluach import dates, hebrewcal
 import slack
+import tweepy as tweepy
+from flask import Flask, jsonify, request
+from pyluach import dates, hebrewcal
 
 from progress_bar import ProgressBar
 
@@ -16,6 +16,7 @@ CONSUMER_KEY = os.environ['CONSUMER_KEY']
 CONSUMER_SECRET = os.environ['CONSUMER_SECRET']
 ACCESS_KEY = os.environ['ACCESS_KEY']
 ACCESS_SECRET = os.environ['ACCESS_SECRET']
+API_KEY = os.environ['API_KEY']
 
 
 def get_current_state():
@@ -61,6 +62,9 @@ def send_slack_alert(msg):
 
 @app.route('/tweet')
 def tweet():
+    if not ("apikey" in request.args and request.args.get("apikey") == API_KEY):
+        send_slack_alert("invalid client")
+        return "Invalid Client", 401
     current_state = get_current_state()
 
     auth = tweepy.OAuthHandler(CONSUMER_KEY, CONSUMER_SECRET)
