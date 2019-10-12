@@ -1,5 +1,9 @@
 language: python
 install:
-  - pip install -r requirements.txt
+- pip install -r requirements.txt
 script:
-  - pytest
+- pytest
+deploy:
+  provider: heroku
+  api_key:
+    secure: qhrGgsoOp0JlSSP4+fhZK+dD9ggbpROqlstrKhZ+zgj43RvI14Hm9P7iQNgvsWDN/Pi8nKfMdr87dHaevPGJHZxllcdoa9+EoNur+zk7BGe6WD3Q2UuWHGGt8qDgtJ2aCXt22mBSfacp2Cz+UEBG3CdibH1kjxjHRdCk68EkKXdFrEUBIr1tXF3L3MAsiL3AV8j0xaNMj7k4jbps9MvoBbmyx3RcBaEeDfGPqo3sNzCpwtzwlCUKJcGMK+u+dl4nIHnX5F8YkOWaB8nC9Tt1MQ/444Uv1CGelE2cZi7CCFE1xQrBvk9vS8gGasndYND94Z6h7SWo7rcKBgdrEb+QTOzL09WpPj3CC7BvNVvflZJCGEFJZjq0m7OYkO6y9C7z2hzsdxGfU/OR+SMvyN/5I27Up7sLu68b51MZt6JVlkWHD1oVRjq1yhAf86Eo3KhKaMuX9M90dJuvMcVLp4jXmhmCLWtyz/+/4z8yfWYsv95FZoGHy/bK00N4LJ+cWsaGIPLyh9cFm1Q4H8CC+knvnwYeHNZ55mz54Egs8DlyD88qvR9PtXpiY6j4q6W1TstnuLk5a8WQSQ6x5IhV8dQw90tkcF/XzVk8DD4RFn4FKFkg/hp2zKyP35Y6MY7zfhwBNv0tfOLMN+49CFGiblrig+8dCmy9NbxeX72OkY/7/E4=
