@@ -9,6 +9,10 @@ from pyluach import dates, hebrewcal
 
 from progress_bar import ProgressBar
 
+PROGRESS_BAR_WIDTH = 20
+EMPTY_SYMBOL = '░'
+PROGRESS_SYMBOL = '▓'
+
 sc = slack.WebClient(os.environ["SLACK_API_TOKEN"])
 app = Flask(__name__)
 
@@ -46,11 +50,14 @@ def get_current_state():
 
 
 def get_progress_bar(current_state):
-    return ProgressBar().update(current_state)
+    return ProgressBar(width=PROGRESS_BAR_WIDTH, progress_symbol=PROGRESS_SYMBOL, empty_symbol=EMPTY_SYMBOL).update(current_state)
 
 
-def get_last_state(text):
-    return int(re.findall(r'\d+', text)[0])
+def get_last_state(tweets):
+    for tweet in tweets:
+        match = re.match(r'^[%s%s]{%d}\s(\d+)' % (EMPTY_SYMBOL, PROGRESS_SYMBOL, PROGRESS_BAR_WIDTH) + "%$", tweet.text)
+        if match:
+            return int(match.group(1))
 
 
 def send_slack_alert(msg):
@@ -71,19 +78,17 @@ def tweet():
     auth.set_access_token(ACCESS_KEY, ACCESS_SECRET)
 
     api = tweepy.API(auth)
-    last_state = None
     try:
-        last_state = get_last_state(api.user_timeline()[0].text)
-    except IndexError:
-        pass
+        last_state = get_last_state(api.user_timeline())
     except Exception as e:
         send_slack_alert("exception: " + repr(e) + "\n" + traceback.format_exc())
+        return jsonify(success=False, tweeted=False), 500
     is_tweeted = False
     if last_state is None or current_state > last_state or (last_state == 100 and current_state == 0):
         api.update_status(status=get_progress_bar(current_state))
         is_tweeted = True
     send_slack_alert("Finish running. tweeted? -> " + str(is_tweeted))
-    return jsonify(success=True, tweeted=is_tweeted)
+    return jsonify(success=True, tweeted=is_tweeted, last_state=last_state)
 
 
 if __name__ == '__main__':
