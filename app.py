@@ -1,3 +1,4 @@
+import datetime
 import os
 import re
 import traceback
@@ -49,8 +50,18 @@ def get_current_state():
     return int((days_count / total_days) * 100)
 
 
+def get_holiday(timeline):
+    holiday = hebrewcal.holiday(dates.HebrewDate.today() + 1, israel=True)
+    if holiday:
+        if len([t for t in timeline
+                if t.created_at == datetime.datetime.today() and t.text == "Happy %s" % holiday]) > 0:
+            return None
+    return holiday
+
+
 def get_progress_bar(current_state):
-    return ProgressBar(width=PROGRESS_BAR_WIDTH, progress_symbol=PROGRESS_SYMBOL, empty_symbol=EMPTY_SYMBOL).update(current_state)
+    return ProgressBar(width=PROGRESS_BAR_WIDTH, progress_symbol=PROGRESS_SYMBOL, empty_symbol=EMPTY_SYMBOL).update(
+        current_state)
 
 
 def get_last_state(tweets):
@@ -78,8 +89,9 @@ def tweet():
     auth.set_access_token(ACCESS_KEY, ACCESS_SECRET)
 
     api = tweepy.API(auth)
+    timeline = api.user_timeline()
     try:
-        last_state = get_last_state(api.user_timeline())
+        last_state = get_last_state(timeline)
     except Exception as e:
         send_slack_alert("exception: " + repr(e) + "\n" + traceback.format_exc())
         return jsonify(success=False, tweeted=False), 500
@@ -87,8 +99,12 @@ def tweet():
     if last_state is None or current_state > last_state or (last_state == 100 and current_state == 0):
         api.update_status(status=get_progress_bar(current_state))
         is_tweeted = True
-    send_slack_alert("Finish running. tweeted? -> " + str(is_tweeted))
-    return jsonify(success=True, tweeted=is_tweeted, last_state=last_state)
+    holiday = get_holiday(timeline)
+    if holiday:
+        api.update_status(status="Happy %s" % holiday)
+    send_slack_alert(
+        "Finish running. tweeted? -> %s. last state -> %s holiday -> %s" % (is_tweeted, last_state, holiday))
+    return jsonify(success=True, tweeted=is_tweeted, last_state=last_state, holiday=holiday is not None)
 
 
 if __name__ == '__main__':

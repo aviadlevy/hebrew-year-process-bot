@@ -11,5 +11,5 @@ This bot publish the progress of the Hebrew calendar year.
 
 - [ ] Add tests
 - [ ] Add full CI/CD
-- [ ] Add auto tweets on Jewish holidays
+- [X] ~~Add auto tweets on Jewish holidays~~
 - [X] ~~Get latest state, even when last tweet is not the state itself~~
