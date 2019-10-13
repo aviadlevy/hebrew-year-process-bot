@@ -54,7 +54,7 @@ def tweet():
         api.update_status(status=get_progress_bar(current_state))
         is_tweeted = True
     holiday = get_holiday()
-    if holiday and is_holiday_tweeted_today(timeline, holiday):
+    if holiday and not is_holiday_tweeted_today(timeline, holiday):
         api.update_status(status="Happy %s!" % holiday)
     send_slack_alert(
         "Finish running. tweeted? -> %s. last state -> %s holiday -> %s" % (is_tweeted, last_state, holiday))
