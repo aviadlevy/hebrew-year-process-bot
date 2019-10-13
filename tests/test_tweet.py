@@ -1,8 +1,17 @@
 import datetime
 
 import pytest
+from tweepy import Status
 
 from tweet_helper import should_tweet, is_holiday_tweeted_today, get_last_state
+
+
+def get_status(text, created_at=None):
+    _json = {"text": text}
+    if created_at:
+        _json['created_at'] = created_at.strftime("%a %b %d %H:%M:%S %Y")
+    return Status().parse(object, _json)
+
 
 should_tweet_test_data = [
     (2, 1, False),
@@ -13,17 +22,18 @@ should_tweet_test_data = [
 ]
 
 is_holiday_tweeted_today_test_data = [
-    ([{"created_at": datetime.datetime.today(), "text": "Happy Holiday!"}], "Holiday", True),
-    ([{"created_at": datetime.datetime.today() - datetime.timedelta(days=1), "text": "Happy Holiday!"}], "Holiday",
+    ([get_status(text="Happy Holiday!", created_at=datetime.datetime.today())], "Holiday", True),
+    ([get_status(text="Happy Holiday!", created_at=datetime.datetime.today() - datetime.timedelta(days=1))], "Holiday",
      False),
-    ([{"created_at": datetime.datetime.today(), "text": "Happy Holiday1!"}], "Holiday", False),
+    ([get_status(text="Happy Holiday1!", created_at=datetime.datetime.today())], "Holiday", False),
 ]
 
 get_last_state_test_data = [
-    ([{"text": "░" * 20 + " 0%"}], 0),
-    ([{"text": "░" * 10 + "▓" * 10 + " 50%"}], 50),
-    ([{"text": "▓" * 20 + " 100%"}], 100),
-    ([{"text": "Something else on my mind"}, {"text": "░" * 20 + " 0%"}], 0),
+    ([get_status(text="░" * 20 + " 0%")], 0),
+    ([get_status(text="░" * 20 + " 0%")], 0),
+    ([get_status(text="░" * 10 + "▓" * 10 + " 50%")], 50),
+    ([get_status(text="▓" * 20 + " 100%")], 100),
+    ([get_status(text="Something else on my mind"), get_status(text="░" * 20 + " 0%")], 0),
 ]
 
 

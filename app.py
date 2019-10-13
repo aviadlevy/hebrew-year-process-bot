@@ -10,7 +10,7 @@ from dates_helper import get_current_state, get_holiday
 from progress_bar import ProgressBar
 from tweet_helper import is_holiday_tweeted_today, should_tweet, get_last_state
 
-sc = slack.WebClient(os.environ["SLACK_API_TOKEN"])
+sc = slack.WebClient(os.environ['SLACK_API_TOKEN'])
 app = Flask(__name__)
 
 CONSUMER_KEY = os.environ['CONSUMER_KEY']
