@@ -1,8 +1,11 @@
 language: python
 install:
-- pip install -r requirements.txt
+  - pip install -r requirements.txt
+  - pip install coveralls
 script:
-- pytest
+  - pytest --cov=./ tests/
+after_success:
+  - coveralls
 deploy:
   provider: heroku
   api_key:
