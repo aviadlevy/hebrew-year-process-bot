@@ -1,5 +1,3 @@
-import datetime
-
 from pyluach import dates, hebrewcal
 
 
@@ -28,5 +26,17 @@ def get_current_state(today=dates.HebrewDate.today()):
     return int((days_count / total_days) * 100)
 
 
-def get_holiday():
-    return hebrewcal.holiday(dates.HebrewDate.today() + 1, israel=True)
+def get_holiday(date=dates.HebrewDate.today()):
+    """
+    If not fast today, check if tomorrow is a holiday
+
+    :param date: the date to check. typeof `dates.HebrewDate` from `pyluach`
+    :return: tuple (name => string, is_holiday => bool) or None if no holiday
+    """
+    fast_table = hebrewcal._fast_day_table(date.year)
+    if date in fast_table:
+        return fast_table[date], False
+    holiday = hebrewcal.holiday(date + 1, israel=True)
+    if holiday:
+        return holiday, True
+    return None, None
