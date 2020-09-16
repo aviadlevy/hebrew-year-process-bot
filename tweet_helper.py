@@ -18,4 +18,4 @@ def should_tweet(last_state, current_state):
 
 def is_holiday_tweeted_today(timeline, holiday):
     return len([t for t in timeline if
-                t.created_at.date() == datetime.datetime.today().date() and t.text == "Happy %s!" % holiday]) > 0
+                t.created_at.date() == datetime.datetime.today().date() and "%s" % holiday in t.text]) > 0
