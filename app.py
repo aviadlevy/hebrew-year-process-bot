@@ -51,7 +51,7 @@ def tweet():
         return jsonify(success=False, tweeted=False), 500
     is_tweeted = False
     if should_tweet(last_state, current_state):
-        # api.update_status(status=get_progress_bar(current_state))
+        api.update_status(status=get_progress_bar(current_state))
         is_tweeted = True
     holiday, is_happy = get_holiday()
     if holiday and not is_holiday_tweeted_today(timeline, holiday):
