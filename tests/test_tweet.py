@@ -28,11 +28,11 @@ is_holiday_tweeted_today_test_data = [
 ]
 
 get_last_state_test_data = [
-    ([get_status(text="░" * 20 + " 0%")], 0),
-    ([get_status(text="░" * 20 + " 0%")], 0),
-    ([get_status(text="░" * 10 + "▓" * 10 + " 50%")], 50),
-    ([get_status(text="▓" * 20 + " 100%")], 100),
-    ([get_status(text="Something else on my mind"), get_status(text="░" * 20 + " 0%")], 0),
+    ([get_status(text="░" * 15 + " 0%")], 0),
+    ([get_status(text="░" * 15 + " 0%")], 0),
+    ([get_status(text="░" * 8 + "▓" * 7 + " 50%")], 50),
+    ([get_status(text="▓" * 15 + " 100%")], 100),
+    ([get_status(text="Something else on my mind"), get_status(text="░" * 15 + " 0%")], 0),
 ]
 
 
