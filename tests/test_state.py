@@ -23,6 +23,7 @@ holiday_test_data = [
 def test_current_state(today, expected):
     assert get_current_state(today) == expected
 
+
 @pytest.mark.parametrize("today,expected", holiday_test_data)
 def test_get_holiday(today, expected):
     assert get_holiday(today) == expected
