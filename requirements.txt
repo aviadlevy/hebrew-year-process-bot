@@ -1,5 +1,5 @@
 pyluach==1.1.1
-pytest==6.0.2
+pytest==6.2.5
 pytest-cov==2.10.1
 slackclient==2.8.2
 tweepy==3.9.0
