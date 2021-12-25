@@ -23,7 +23,8 @@ should_tweet_test_data = [
 
 is_holiday_tweeted_today_test_data = [
     ([get_status(text="Happy Hanukkah!", created_at=datetime.datetime.today())], "Hanukkah", True),
-    ([get_status(text="Happy Hanukkah!", created_at=datetime.datetime.today() - datetime.timedelta(days=1))], "Hanukkah", False),
+    ([get_status(text="Happy Hanukkah!", created_at=datetime.datetime.today() - datetime.timedelta(days=1))],
+     "Hanukkah", False),
     ([get_status(text="Happy Pesach!", created_at=datetime.datetime.today())], "Hanukkah", False),
 ]
 
