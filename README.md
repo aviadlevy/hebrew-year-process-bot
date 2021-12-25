@@ -1,6 +1,6 @@
 # Hebrew Year Progress
 
-[![Build Status](https://travis-ci.com/aviadlevy/hebrew-year-process-bot.svg?branch=master)](https://travis-ci.com/aviadlevy/hebrew-year-process-bot) [![Coverage Status](https://coveralls.io/repos/github/aviadlevy/hebrew-year-process-bot/badge.svg)](https://coveralls.io/github/aviadlevy/hebrew-year-process-bot)  
+[![Testing the app](https://github.com/aviadlevy/hebrew-year-process-bot/actions/workflows/testing.yaml/badge.svg)](https://github.com/aviadlevy/hebrew-year-process-bot/actions/workflows/testing.yaml) [![codecov](https://codecov.io/gh/aviadlevy/hebrew-year-process-bot/branch/master/graph/badge.svg?token=VN6BY02U4Z)](https://codecov.io/gh/aviadlevy/hebrew-year-process-bot)  
 
 Twitter bot inspired by [@year_progress](https://twitter.com/year_progress).  
 This bot publish the progress of the Hebrew calendar year.
