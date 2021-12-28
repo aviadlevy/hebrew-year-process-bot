@@ -17,4 +17,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
       - name: Tweet
+        env:
+          SLACK_API_TOKEN: ${{secrets.SLACK_API_TOKEN}}
+          CONSUMER_KEY: ${{secrets.CONSUMER_KEY}}
+          CONSUMER_SECRET: ${{secrets.CONSUMER_SECRET}}
+          ACCESS_KEY: ${{secrets.ACCESS_KEY}}
+          ACCESS_SECRET: ${{secrets.ACCESS_SECRET}}
         run: python app.py
