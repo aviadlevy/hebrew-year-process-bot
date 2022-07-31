@@ -1,5 +1,5 @@
-pyluach==1.1.1
-pytest==6.2.5
-pytest-cov==2.10.1
-slackclient==2.8.2
-tweepy==3.9.0
+pyluach==2.0.0
+pytest==7.1.2
+pytest-cov==3.0.0
+slackclient==2.9.4
+tweepy==4.10.0
