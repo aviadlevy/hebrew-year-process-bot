@@ -1,19 +1,14 @@
 import os
 
 import slack
-import tweepy as tweepy
+from tweepy.asynchronous import AsyncClient
 
-CONSUMER_KEY = os.environ['CONSUMER_KEY']
-CONSUMER_SECRET = os.environ['CONSUMER_SECRET']
-ACCESS_KEY = os.environ['ACCESS_KEY']
-ACCESS_SECRET = os.environ['ACCESS_SECRET']
+BEARER_TOKEN = os.environ['BEARER_TOKEN']
 
 
-def get_client():
-    client = tweepy.Client(access_token=ACCESS_KEY, access_token_secret=ACCESS_SECRET,
-                           consumer_key=CONSUMER_KEY, consumer_secret=CONSUMER_SECRET, wait_on_rate_limit=True)
-    return client
+def get_async_client():
+    return AsyncClient(bearer_token=BEARER_TOKEN, wait_on_rate_limit=True)
 
 
-def get_slack_client():
-    return slack.WebClient(os.environ['SLACK_API_TOKEN'])
+def get_async_slack_client():
+    return slack.AsyncWebClient(os.environ['SLACK_API_TOKEN'])
