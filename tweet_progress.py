@@ -1,13 +1,11 @@
 import asyncio
 import traceback
 
-from config import get_async_client, get_async_slack_client
+from config import get_async_client, get_async_slack_client, USER_ID
 from constant import PROGRESS_BAR_WIDTH, PROGRESS_SYMBOL, EMPTY_SYMBOL
 from dates_helper import get_current_state
 from progress_bar import ProgressBar
 from tweet_helper import should_tweet, get_last_state
-
-USER_ID = 1099727648471871490
 
 
 def get_progress_bar(current_state):
