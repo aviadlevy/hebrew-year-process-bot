@@ -1,7 +1,7 @@
 import asyncio
 import traceback
 
-from config import get_async_client, get_async_slack_client, USER_ID
+from config import get_async_client, get_async_slack_client, USER_ID, send_slack_alert
 from constant import PROGRESS_BAR_WIDTH, PROGRESS_SYMBOL, EMPTY_SYMBOL
 from dates_helper import get_current_state
 from progress_bar import ProgressBar
@@ -11,13 +11,6 @@ from tweet_helper import should_tweet, get_last_state
 def get_progress_bar(current_state):
     return ProgressBar(width=PROGRESS_BAR_WIDTH, progress_symbol=PROGRESS_SYMBOL, empty_symbol=EMPTY_SYMBOL).update(
         current_state)
-
-
-async def send_slack_alert(sc, msg):
-    await sc.chat_postMessage(
-        channel="#hebrew-year-process",
-        text=msg
-    )
 
 
 async def tweet():

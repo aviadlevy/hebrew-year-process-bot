@@ -22,10 +22,18 @@ def get_async_client():
 def get_async_stream():
     return _AsyncStreamingClient(
         async_client=get_async_client(),
+        slack_client=get_async_slack_client(),
         user_id=USER_ID,
         bearer_token=BEARER_TOKEN,
         wait_on_rate_limit=True)
 
 
-def get_async_slack_client():
+def get_async_slack_client() -> slack.AsyncWebClient:
     return slack.AsyncWebClient(os.environ['SLACK_API_TOKEN'])
+
+
+async def send_slack_alert(sc, msg):
+    await sc.chat_postMessage(
+        channel="#hebrew-year-process",
+        text=msg
+    )
