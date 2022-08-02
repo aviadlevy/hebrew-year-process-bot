@@ -32,8 +32,3 @@ def get_async_slack_client() -> slack.AsyncWebClient:
     return slack.AsyncWebClient(os.environ['SLACK_API_TOKEN'])
 
 
-async def send_slack_alert(sc, msg):
-    await sc.chat_postMessage(
-        channel="#hebrew-year-process",
-        text=msg
-    )
