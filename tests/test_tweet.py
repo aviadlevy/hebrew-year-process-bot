@@ -1,16 +1,18 @@
 import datetime
+import math
+import random
 
 import pytest
-from tweepy import Status
+from tweepy import Tweet
 
 from tweet_helper import should_tweet, is_holiday_tweeted_today, get_last_state
 
 
 def get_status(text, created_at=None):
-    _json = {"text": text}
+    _json = {"text": text, "id": random.randint(0, 100)}
     if created_at:
-        _json['created_at'] = created_at.strftime("%a %b %d %H:%M:%S %Y")
-    return Status().parse(object, _json)
+        _json['created_at'] = created_at.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+    return Tweet(data=_json)
 
 
 should_tweet_test_data = [
