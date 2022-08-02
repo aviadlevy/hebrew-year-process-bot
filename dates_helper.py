@@ -33,9 +33,9 @@ def get_holiday(date=dates.HebrewDate.today()):
     :param date: the date to check. typeof `dates.HebrewDate` from `pyluach`
     :return: tuple (name => string, is_holiday => bool) or None if no holiday
     """
-    fast_table = hebrewcal._fast_day_table(date.year)
-    if date in fast_table:
-        return fast_table[date], False
+    fast_day = hebrewcal.fast_day(date)
+    if fast_day:
+        return fast_day, False
     holiday = hebrewcal.holiday(date + 1, israel=True)
     if holiday:
         return holiday, True
