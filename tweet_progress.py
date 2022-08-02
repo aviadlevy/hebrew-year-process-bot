@@ -1,7 +1,8 @@
 import asyncio
 import traceback
 
-from config import get_async_client, get_async_slack_client, USER_ID, send_slack_alert
+from config import get_async_client, get_async_slack_client, USER_ID
+from utils import send_slack_alert
 from constant import PROGRESS_BAR_WIDTH, PROGRESS_SYMBOL, EMPTY_SYMBOL
 from dates_helper import get_current_state
 from progress_bar import ProgressBar
