@@ -40,3 +40,11 @@ def get_holiday(date=dates.HebrewDate.today()):
     if holiday:
         return holiday, True
     return None, None
+
+
+def get_current_date(lang="eng"):
+    d = dates.HebrewDate.today()
+    if lang == "heb":
+        return f"{d:%*d %*B %*Y}"
+    else:
+        return f"{d:%-d %B %Y}"
