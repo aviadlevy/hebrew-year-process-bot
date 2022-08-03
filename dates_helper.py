@@ -1,4 +1,11 @@
+from datetime import datetime, date, time, timedelta
+
+from astral import LocationInfo
+from astral.sun import sun
 from pyluach import dates, hebrewcal
+from pytz import timezone
+
+from constant import JERUSALEM_CITY, TZ
 
 
 def get_current_state(today=dates.HebrewDate.today()):
@@ -42,9 +49,27 @@ def get_holiday(date=dates.HebrewDate.today()):
     return None, None
 
 
-def get_current_date(lang="eng"):
-    d = dates.HebrewDate.today()
+def get_midnight(tz):
+    midnight = datetime.combine(date.today() + timedelta(days=1), time())
+    return timezone(tz).localize(midnight)
+
+
+def is_past_tzet_hakohavim_and_before_midnight(now, tz="UTC"):
+    s = sun(JERUSALEM_CITY.observer, date=now)
+    return get_midnight(tz=tz) > now > s["sunset"]
+
+
+def get_current_date(lang="eng") -> str:
+    now_tz = datetime.now(timezone(TZ))
+    d = get_heb_date_from_pydate(now_tz)
     if lang == "heb":
         return f"{d:%*d %*B %*Y}"
     else:
         return f"{d:%-d %B %Y}"
+
+
+def get_heb_date_from_pydate(d: datetime):
+    heb_date = dates.GregorianDate.from_pydate(d).to_heb()
+    if is_past_tzet_hakohavim_and_before_midnight(d, tz=TZ):
+        heb_date += 1
+    return heb_date
