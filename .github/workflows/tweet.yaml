@@ -24,4 +24,4 @@ jobs:
           CONSUMER_SECRET: ${{secrets.CONSUMER_SECRET}}
           ACCESS_KEY: ${{secrets.ACCESS_KEY}}
           ACCESS_SECRET: ${{secrets.ACCESS_SECRET}}
-        run: python tweet_progress.py
+        run: python src/tweet_progress.py

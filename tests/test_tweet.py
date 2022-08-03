@@ -1,11 +1,10 @@
 import datetime
-import math
 import random
 
 import pytest
 from tweepy import Tweet
 
-from tweet_helper import should_tweet, is_holiday_tweeted_today, get_last_state
+from src.tweet_helper import should_tweet, is_holiday_tweeted_today, get_last_state
 
 
 def get_status(text, created_at=None):
