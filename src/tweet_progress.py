@@ -20,7 +20,7 @@ async def tweet():
     client = get_async_client()
     sc = get_async_slack_client()
 
-    timeline = await client.get_users_tweets(id=USER_ID)
+    timeline = await client.get_users_tweets(id=USER_ID, user_auth=True)
     try:
         last_state = get_last_state(timeline.data)
     except Exception as e:
