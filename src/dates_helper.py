@@ -2,7 +2,7 @@ from datetime import datetime, date, time, timedelta
 
 from astral import LocationInfo
 from astral.sun import sun
-from pyluach import dates, hebrewcal
+from pyluach import dates, hebrewcal, parshios
 from pytz import timezone
 
 from constant import JERUSALEM_CITY, TZ
@@ -60,12 +60,17 @@ def is_past_tzet_hakohavim_and_before_midnight(now, tz="UTC"):
 
 
 def get_current_date(lang="eng") -> str:
-    now_tz = datetime.now(timezone(TZ))
-    d = get_heb_date_from_pydate(now_tz)
+    d = get_today_heb_date()
     if lang == "heb":
         return f"{d:%*d %*B %*Y}"
     else:
         return f"{d:%-d %B %Y}"
+
+
+def get_today_heb_date():
+    now_tz = datetime.now(timezone(TZ))
+    d = get_heb_date_from_pydate(now_tz)
+    return d
 
 
 def get_heb_date_from_pydate(d: datetime):
@@ -73,3 +78,7 @@ def get_heb_date_from_pydate(d: datetime):
     if is_past_tzet_hakohavim_and_before_midnight(d, tz=TZ):
         heb_date += 1
     return heb_date
+
+
+def get_current_parashah(lang="eng") -> str:
+    return parshios.getparsha_string(get_today_heb_date(), hebrew=(lang == "heb"))
