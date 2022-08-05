@@ -4,8 +4,8 @@ import slack
 from tweepy import Tweet
 from tweepy.asynchronous import AsyncStreamingClient, AsyncClient
 
+from src.lang import MESSAGES
 from utils import send_slack_alert
-from dates_helper import get_current_date
 
 
 class _AsyncStreamingClient(AsyncStreamingClient):
@@ -22,9 +22,13 @@ class _AsyncStreamingClient(AsyncStreamingClient):
             if tweet.author_id == self.user_id:
                 return
             if "date" in tweet.text.lower():
-                return await self.reply_to_tweet(tweet, f"The date is:\n{get_current_date(lang='eng')}")
+                return await self.reply_to_tweet(tweet, MESSAGES["date"]["eng"]())
             elif "תאריך" in tweet.text.lower():
-                return await self.reply_to_tweet(tweet, f"התאריך הוא:\n{get_current_date(lang='heb')}")
+                return await self.reply_to_tweet(tweet, MESSAGES["date"]["heb"]())
+            elif "parasha" in tweet.text.lower():
+                return await self.reply_to_tweet(tweet, MESSAGES["parashah"]["eng"]())
+            elif any(x in tweet.text.lower() for x in ["פרשה", "פרשת"]):
+                return await self.reply_to_tweet(tweet, MESSAGES["parashah"]["heb"]())
         except Exception as e:
             await send_slack_alert(self.sc, "exception: " + repr(e) + "\n" + traceback.format_exc())
 
