@@ -4,7 +4,7 @@ import slack
 from tweepy import Tweet
 from tweepy.asynchronous import AsyncStreamingClient, AsyncClient
 
-from src.lang import MESSAGES
+from lang import MESSAGES
 from utils import send_slack_alert
 
 

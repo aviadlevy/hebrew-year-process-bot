@@ -10,8 +10,8 @@ RULE_TAG = "mentions tweets"
 
 async def reply():
     stream = get_async_stream()
-    res = await stream.add_rules([StreamRule(value=RULE_VALUE, tag=RULE_TAG)])
-    res = await stream.filter(expansions=["author_id"])
+    await stream.add_rules([StreamRule(value=RULE_VALUE, tag=RULE_TAG)])
+    await stream.filter(expansions=["author_id"])
 
 
 if __name__ == '__main__':

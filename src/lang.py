@@ -1,6 +1,4 @@
-import datetime
-
-from src.dates_helper import get_current_date, get_current_parashah
+from dates_helper import get_current_date, get_current_parashah
 
 
 def get_eng_date():
@@ -9,6 +7,7 @@ def get_eng_date():
 
 def get_heb_date():
     return f"התאריך הוא:\n{get_current_date(lang='heb')}"
+
 
 def get_eng_parashah():
     return f"The Parashah is {get_current_parashah(lang='eng')}"
