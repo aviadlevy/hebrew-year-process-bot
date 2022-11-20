@@ -5,7 +5,8 @@ from tweepy import Tweet
 from tweepy.asynchronous import AsyncStreamingClient, AsyncClient
 
 from lang import MESSAGES
-from utils import send_slack_alert
+from src.tweet_helper import get_text_to_reply
+from utils import send_async_slack_alert
 
 
 class _AsyncStreamingClient(AsyncStreamingClient):
@@ -21,16 +22,11 @@ class _AsyncStreamingClient(AsyncStreamingClient):
         try:
             if tweet.author_id == self.user_id:
                 return
-            if "date" in tweet.text.lower():
-                return await self.reply_to_tweet(tweet, MESSAGES["date"]["eng"]())
-            elif "תאריך" in tweet.text.lower():
-                return await self.reply_to_tweet(tweet, MESSAGES["date"]["heb"]())
-            elif "parasha" in tweet.text.lower():
-                return await self.reply_to_tweet(tweet, MESSAGES["parashah"]["eng"]())
-            elif any(x in tweet.text.lower() for x in ["פרשה", "פרשת"]):
-                return await self.reply_to_tweet(tweet, MESSAGES["parashah"]["heb"]())
+            reply = get_text_to_reply(tweet.text.lower())
+            if reply:
+                return await self.reply_to_tweet(tweet, reply)
         except Exception as e:
-            await send_slack_alert(self.sc, "exception: " + repr(e) + "\n" + traceback.format_exc())
+            await send_async_slack_alert(self.sc, "exception: " + repr(e) + "\n" + traceback.format_exc())
 
     async def reply_to_tweet(self, tweet: Tweet, message: str):
         return await self.async_client.create_tweet(in_reply_to_tweet_id=tweet.id, text=message)

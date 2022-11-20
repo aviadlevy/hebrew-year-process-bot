@@ -2,7 +2,7 @@ import asyncio
 import traceback
 
 from config import get_async_twitter_client, get_async_slack_client, USER_ID, get_mastodon_client, run_in_executor
-from utils import send_slack_alert
+from utils import send_async_slack_alert
 from constant import PROGRESS_BAR_WIDTH, PROGRESS_SYMBOL, EMPTY_SYMBOL
 from dates_helper import get_current_state
 from progress_bar import ProgressBar
@@ -37,7 +37,7 @@ async def tweet():
     try:
         last_state = get_last_state(timeline.data)
     except Exception as e:
-        await send_slack_alert(sc, "exception: " + repr(e) + "\n" + traceback.format_exc())
+        await send_async_slack_alert(sc, "exception: " + repr(e) + "\n" + traceback.format_exc())
         return -1
     is_tweeted = False
     if should_tweet(last_state, current_state):
@@ -46,7 +46,7 @@ async def tweet():
         await toot(mastodon_client, progress_bar)
         is_tweeted = True
     print("Finish running. tweeted? -> %s. last state -> %sø" % (is_tweeted, last_state))
-    await send_slack_alert(sc, "Finish running. tweeted? -> %s. last state -> %s" % (is_tweeted, last_state))
+    await send_async_slack_alert(sc, "Finish running. tweeted? -> %s. last state -> %s" % (is_tweeted, last_state))
     return 0
 
 

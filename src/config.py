@@ -6,7 +6,8 @@ import slack
 from mastodon import Mastodon
 from tweepy.asynchronous import AsyncClient
 
-from async_stream_client import _AsyncStreamingClient
+from async_stream_client_twitter import _AsyncStreamingClient
+from src.stream_listener_mastodon import _StreamingListener
 
 USER_ID = 1099727648471871490
 
@@ -22,13 +23,21 @@ def get_async_twitter_client():
                        consumer_key=CONSUMER_KEY, consumer_secret=CONSUMER_SECRET, wait_on_rate_limit=True)
 
 
-def get_async_stream():
+def get_async_twitter_stream():
     return _AsyncStreamingClient(
         async_client=get_async_twitter_client(),
         slack_client=get_async_slack_client(),
         user_id=USER_ID,
         bearer_token=BEARER_TOKEN,
         wait_on_rate_limit=True)
+
+
+def get_mastodon_stream_listener(mastodon_client):
+    return _StreamingListener(mastodon_client=mastodon_client, slack_client=get_slack_client())
+
+
+def get_slack_client() -> slack.WebClient:
+    return slack.WebClient(os.environ['SLACK_API_TOKEN'])
 
 
 def get_async_slack_client() -> slack.AsyncWebClient:
