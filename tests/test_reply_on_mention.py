@@ -5,7 +5,7 @@ import slack
 from tweepy import Response, Tweet
 from tweepy.asynchronous import AsyncClient
 
-from src.async_stream_client import _AsyncStreamingClient
+from src.async_stream_client_twitter import _AsyncStreamingClient
 from src.dates_helper import get_current_date, get_current_parashah
 
 

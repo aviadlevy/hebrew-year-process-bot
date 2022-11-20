@@ -2,14 +2,14 @@ import asyncio
 
 from tweepy import StreamRule
 
-from config import get_async_stream
+from config import get_async_twitter_stream
 
 RULE_VALUE = "@yearprogressheb -is:retweet"
 RULE_TAG = "mentions tweets"
 
 
 async def reply():
-    stream = get_async_stream()
+    stream = get_async_twitter_stream()
     await stream.add_rules([StreamRule(value=RULE_VALUE, tag=RULE_TAG)])
     await stream.filter(expansions=["author_id"])
 
