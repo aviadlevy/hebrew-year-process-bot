@@ -3,8 +3,7 @@ import traceback
 import slack
 from mastodon import StreamListener, Mastodon
 
-from lang import MESSAGES
-from src.tweet_helper import get_text_to_reply
+from tweet_helper import get_text_to_reply
 from utils import send_slack_alert
 
 

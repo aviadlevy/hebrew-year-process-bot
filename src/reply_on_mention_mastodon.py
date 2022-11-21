@@ -1,10 +1,7 @@
-import asyncio
 import traceback
 
-from tweepy import StreamRule
-
-from src.config import get_mastodon_stream_listener, get_mastodon_client, get_slack_client
-from src.utils import send_slack_alert
+from config import get_mastodon_stream_listener, get_mastodon_client, get_slack_client
+from utils import send_slack_alert
 
 
 def reply():

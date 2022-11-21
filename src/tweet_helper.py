@@ -2,7 +2,7 @@ import datetime
 import re
 
 from constant import EMPTY_SYMBOL, PROGRESS_SYMBOL, PROGRESS_BAR_WIDTH
-from src.lang import MESSAGES
+from lang import MESSAGES
 
 
 def get_last_state(tweets):

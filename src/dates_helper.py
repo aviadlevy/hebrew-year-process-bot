@@ -1,6 +1,5 @@
 from datetime import datetime, date, time, timedelta
 
-from astral import LocationInfo
 from astral.sun import sun
 from pyluach import dates, hebrewcal, parshios
 from pytz import timezone
