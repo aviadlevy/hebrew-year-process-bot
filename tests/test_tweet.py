@@ -2,16 +2,15 @@ import datetime
 import random
 
 import pytest
-from tweepy import Tweet
 
-from src.tweet_helper import should_tweet, is_holiday_tweeted_today, get_last_state
+from src.tweet_helper import should_tweet, get_last_state
 
 
 def get_status(text, created_at=None):
-    _json = {"text": text, "id": random.randint(0, 100)}
+    _json = {"content": "<p>" + text + "</p>", "id": random.randint(0, 100)}
     if created_at:
         _json['created_at'] = created_at.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-    return Tweet(data=_json)
+    return _json
 
 
 should_tweet_test_data = [
@@ -41,11 +40,6 @@ get_last_state_test_data = [
 @pytest.mark.parametrize("last_state, current_state, expected", should_tweet_test_data)
 def test_should_tweet(last_state, current_state, expected):
     assert should_tweet(last_state, current_state) == expected
-
-
-@pytest.mark.parametrize("timeline, holiday, expected", is_holiday_tweeted_today_test_data)
-def test_is_holiday_tweeted_today(timeline, holiday, expected):
-    assert is_holiday_tweeted_today(timeline, holiday) == expected
 
 
 @pytest.mark.parametrize("tweets, expected", get_last_state_test_data)
