@@ -1,12 +1,12 @@
 import asyncio
 import traceback
 
-from config import get_async_twitter_client, get_async_slack_client, USER_ID, get_mastodon_client, run_in_executor
-from utils import send_async_slack_alert
+from config import get_async_twitter_client, get_async_slack_client, get_mastodon_client, run_in_executor
 from constant import PROGRESS_BAR_WIDTH, PROGRESS_SYMBOL, EMPTY_SYMBOL
 from dates_helper import get_current_state
 from progress_bar import ProgressBar
 from tweet_helper import should_tweet, get_last_state
+from utils import send_async_slack_alert
 
 
 @run_in_executor
@@ -19,6 +19,17 @@ def toot(mastodon_client, text):
     :return:
     """
     return mastodon_client.toot(text)
+
+@run_in_executor
+def timeline_home(mastodon_client, limit=None):
+    """
+    wrapper of asyncio to blocking library
+
+    :param limit: limit timeline results
+    :param mastodon_client: blocking client of mastodon
+    :return:
+    """
+    return mastodon_client.timeline_home(limit=limit)
 
 
 def get_progress_bar(current_state):
@@ -33,9 +44,9 @@ async def tweet():
     mastodon_client = get_mastodon_client()
     sc = get_async_slack_client()
 
-    timeline = await twitter_client.get_users_tweets(id=USER_ID, user_auth=True)
+    timeline = await timeline_home(mastodon_client, limit=10)
     try:
-        last_state = get_last_state(timeline.data)
+        last_state = get_last_state(timeline)
     except Exception as e:
         await send_async_slack_alert(sc, "exception: " + repr(e) + "\n" + traceback.format_exc())
         return -1
