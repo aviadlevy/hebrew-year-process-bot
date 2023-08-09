@@ -1,0 +1,30 @@
+[tool.poetry]
+name = "hebrew-year-process-bot"
+version = "0.1.0"
+description = ""
+authors = ["aviadlevy <aviadlevy1@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+astral = "^3.2"
+async-lru = "^2.0.4"
+mastodon-py = "~1.6.1"
+pyluach = "^2.2.0"
+pytz = "^2023.3"
+slackclient = "^2.9.4"
+tweepy = "^4.14.0"
+
+
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.0"
+coverage = "^7.2.7"
+pytest-asyncio = "^0.21.1"
+pytest-cov = "^4.1.0"
+pytest-mock = "^3.11.1"
+flake8 = "^6.1.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
