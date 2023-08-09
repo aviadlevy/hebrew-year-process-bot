@@ -20,6 +20,7 @@ def toot(mastodon_client, text):
     """
     return mastodon_client.toot(text)
 
+
 @run_in_executor
 def timeline_home(mastodon_client, limit=None):
     """
