@@ -41,19 +41,17 @@ async def test_tweet(mocker):
 
     mock_twitter_client = MagicMock()
     mock_mastodon_client = MagicMock()
-    mock_slack_client = MagicMock()
 
     async def mock_create_tweet(**kwargs):
         return "Tweet successful"
 
     mocker.patch("tweet_progress.get_async_twitter_client", return_value=mock_twitter_client)
     mocker.patch("tweet_progress.get_mastodon_client", return_value=mock_mastodon_client)
-    mocker.patch("tweet_progress.get_async_slack_client", return_value=mock_slack_client)
     mock_mastodon_client.timeline_home.return_value = [{'content': '<p>▓▓▓▓▓▓▓▓░░░░░░░ 49%</p>'},
                                                        {'content': '<p>▓▓▓▓▓▓▓▓░░░░░░░ 48%</p>'}]
     mock_twitter_client.create_tweet.return_value = mock_create_tweet()
     mock_mastodon_client.toot.return_value = "Toot"
-    mocker.patch("tweet_progress.send_async_slack_alert", return_value=None)
+    mocker.patch("tweet_progress.send_async_alert", return_value=None)
 
     result = await tweet()
     assert result == 0
