@@ -56,8 +56,8 @@ async def tweet():
         await twitter_client.create_tweet(text=progress_bar)
         await toot(mastodon_client, progress_bar)
         is_tweeted = True
-    print("Finish running. tweeted? -> %s. last state -> %sø" % (is_tweeted, last_state))
-    await send_async_alert("Finish running. tweeted? -> %s. last state -> %s" % (is_tweeted, last_state))
+    print("tweeted? -> %s. current state -> %s .last state -> %sø" % (is_tweeted, current_state, last_state))
+    await send_async_alert("tweeted? -> %s. current state -> %s .last state -> %sø" % (is_tweeted, current_state, last_state))
     return 0
 
 
