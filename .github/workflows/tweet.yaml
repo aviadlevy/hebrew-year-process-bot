@@ -51,3 +51,12 @@ jobs:
         run: |
           source .venv/bin/activate
           python src/tweet_progress.py
+
+      - name: Alert on failure
+        if: failure()
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_TOKEN }}
+          message: |
+            Job failed :(
