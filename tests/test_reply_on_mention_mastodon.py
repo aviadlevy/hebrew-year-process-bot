@@ -24,8 +24,13 @@ def create_notification(message, status_id):
     })
 
 
+class TestMastodon(Mastodon):
+    def __init__(self):
+        super().__init__(api_base_url="testApi")
+
+
 def base_flow(mocker, message):
-    mastodon: Mastodon = Mastodon()
+    mastodon: Mastodon = TestMastodon()
     mocker.patch.object(mastodon, "status_reply")
     spy = mocker.spy(mastodon, "status_reply")
     stream_client = _StreamingListener(mastodon)
@@ -58,5 +63,5 @@ def test_parashah_heb(mocker):
 
 
 def test_unsupported_command(mocker):
-    spy, notification_status = base_flow(mocker, "What's up dude?")
+    spy, _ = base_flow(mocker, "What's up dude?")
     spy.assert_not_called()
