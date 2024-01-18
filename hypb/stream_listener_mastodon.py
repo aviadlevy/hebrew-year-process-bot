@@ -2,8 +2,8 @@ import traceback
 
 from mastodon import Mastodon, StreamListener
 
-from src.tweet_helper import get_text_to_reply
-from src.utils import send_alert
+from hypb.tweet_helper import get_text_to_reply
+from hypb.utils import send_alert
 
 
 class _StreamingListener(StreamListener):

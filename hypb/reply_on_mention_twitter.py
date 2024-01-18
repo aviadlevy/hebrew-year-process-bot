@@ -3,7 +3,7 @@ import sys
 
 from tweepy import StreamRule
 
-from src.config import get_async_twitter_stream
+from hypb.config import get_async_twitter_stream
 
 RULE_VALUE = "@yearprogressheb -is:retweet"
 RULE_TAG = "mentions tweets"

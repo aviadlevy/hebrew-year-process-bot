@@ -2,7 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.tweet_progress import get_progress_bar, timeline_home, toot, tweet
+from hypb.tweet_progress import get_progress_bar, timeline_home, toot, tweet
 
 FIFTY_PRECENT_BAR = "▓▓▓▓▓▓▓▓░░░░░░░ 50%"
 
@@ -39,7 +39,7 @@ def test_get_progress_bar():
 # Mocking async functions in 'tweet' for testing
 @pytest.mark.asyncio
 async def test_tweet(mocker):
-    mocker.patch("src.tweet_progress.get_current_state", return_value=50)  # Adjust the current state as needed
+    mocker.patch("hypb.tweet_progress.get_current_state", return_value=50)  # Adjust the current state as needed
 
     mock_twitter_client = MagicMock()
     mock_mastodon_client = MagicMock()
@@ -47,13 +47,13 @@ async def test_tweet(mocker):
     async def mock_create_tweet(**kwargs):
         return "Tweet successful"
 
-    mocker.patch("src.tweet_progress.get_async_twitter_client", return_value=mock_twitter_client)
-    mocker.patch("src.tweet_progress.get_mastodon_client", return_value=mock_mastodon_client)
+    mocker.patch("hypb.tweet_progress.get_async_twitter_client", return_value=mock_twitter_client)
+    mocker.patch("hypb.tweet_progress.get_mastodon_client", return_value=mock_mastodon_client)
     mock_mastodon_client.timeline_home.return_value = [{"content": "<p>▓▓▓▓▓▓▓▓░░░░░░░ 49%</p>"},
                                                        {"content": "<p>▓▓▓▓▓▓▓▓░░░░░░░ 48%</p>"}]
     mock_twitter_client.create_tweet.return_value = mock_create_tweet()
     mock_mastodon_client.toot.return_value = "Toot"
-    mocker.patch("src.tweet_progress.send_async_alert", return_value=None)
+    mocker.patch("hypb.tweet_progress.send_async_alert", return_value=None)
 
     result = await tweet()
     assert result == 0

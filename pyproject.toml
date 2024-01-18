@@ -4,7 +4,6 @@ authors = ["aviadlevy <aviadlevy1@gmail.com>"]
 readme = "README.md"
 license = "LICENSE"
 
-
 [tool.poetry]
 name = "hebrew-year-process-bot"
 version = "0.1.0"
@@ -107,6 +106,7 @@ ignore = [
 fixture-parentheses = false
 
 [tool.ruff.isort]
+known-first-party = ["hypb"]
 combine-as-imports = true
 split-on-trailing-comma = false
 

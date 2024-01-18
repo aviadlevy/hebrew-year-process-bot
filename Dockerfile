@@ -28,4 +28,4 @@ COPY poetry.lock pyproject.toml ./
 RUN poetry check
 RUN poetry install --no-interaction --no-cache --without dev
 
-COPY src .
+COPY hypb .
