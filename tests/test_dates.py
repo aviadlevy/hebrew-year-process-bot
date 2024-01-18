@@ -4,8 +4,8 @@ import pytest
 from pyluach.dates import HebrewDate
 from pytz import timezone
 
-from hypb.constant import TZ
-from hypb.dates_helper import get_heb_date_from_pydate
+from src.constant import TZ
+from src.dates_helper import get_heb_date_from_pydate
 
 get_heb_date_from_pydate_date = [
     (timezone(TZ).localize(datetime(2022, 8, 3, 18, 45)), HebrewDate(5782, 5, 6)),  # before subset

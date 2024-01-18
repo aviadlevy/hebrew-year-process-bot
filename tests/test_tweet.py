@@ -3,7 +3,7 @@ import random
 
 import pytest
 
-from hypb.tweet_helper import get_last_state, should_tweet
+from src.tweet_helper import get_last_state, should_tweet
 
 
 def get_status(text, created_at=None):

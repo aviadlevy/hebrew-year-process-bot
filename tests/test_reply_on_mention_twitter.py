@@ -4,8 +4,8 @@ import pytest
 from tweepy import Tweet
 from tweepy.asynchronous import AsyncClient
 
-from hypb.async_stream_client_twitter import _AsyncStreamingClient
-from hypb.dates_helper import get_current_date, get_current_parashah
+from src.async_stream_client_twitter import _AsyncStreamingClient
+from src.dates_helper import get_current_date, get_current_parashah
 
 
 def create_tweet(message, tweet_id, user_id=None):

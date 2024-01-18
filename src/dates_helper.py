@@ -4,7 +4,7 @@ from astral.sun import sun
 from pyluach import dates, hebrewcal, parshios
 from pytz import timezone
 
-from hypb.constant import JERUSALEM_CITY, TISHREY, TZ
+from src.constant import JERUSALEM_CITY, TISHREY, TZ
 
 
 def get_current_state(today=dates.HebrewDate.today()):
