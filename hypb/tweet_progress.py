@@ -1,11 +1,12 @@
 import asyncio
+import sys
 import traceback
 
 from config import get_async_twitter_client, get_mastodon_client, run_in_executor
-from constant import PROGRESS_BAR_WIDTH, PROGRESS_SYMBOL, EMPTY_SYMBOL
+from constant import EMPTY_SYMBOL, PROGRESS_BAR_WIDTH, PROGRESS_SYMBOL
 from dates_helper import get_current_state
 from progress_bar import ProgressBar
-from tweet_helper import should_tweet, get_last_state
+from tweet_helper import get_last_state, should_tweet
 from utils import send_async_alert
 
 
@@ -56,10 +57,10 @@ async def tweet():
         await twitter_client.create_tweet(text=progress_bar)
         await toot(mastodon_client, progress_bar)
         is_tweeted = True
-    print("tweeted? -> %s. current state -> %s .last state -> %sø" % (is_tweeted, current_state, last_state))
-    await send_async_alert("tweeted? -> %s. current state -> %s .last state -> %sø" % (is_tweeted, current_state, last_state))
+    print(f"tweeted? -> {is_tweeted}. current state -> {current_state} .last state -> {last_state}ø")
+    await send_async_alert(f"tweeted? -> {is_tweeted}. current state -> {current_state} .last state -> {last_state}ø")
     return 0
 
 
-if __name__ == '__main__':
-    exit(asyncio.run(tweet()))
+if __name__ == "__main__":
+    sys.exit(asyncio.run(tweet()))

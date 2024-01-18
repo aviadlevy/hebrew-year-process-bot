@@ -1,12 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 The Progress Bar code written by Joey Payne
 see here: http://pythoncentral.io/how-to-movecopy-a-file-or-directory-folder-with-a-progress-bar-in-python/
 """
 
 
-class ProgressBar(object):
-    def __init__(self, width=20, progress_symbol='▓', empty_symbol='░'):
+class ProgressBar:
+    def __init__(self, width=20, progress_symbol="▓", empty_symbol="░"):
         self.width = width
 
         if self.width < 0:
@@ -22,4 +21,4 @@ class ProgressBar(object):
 
         progress_bar = self.progress_symbol * filled_blocks + self.empty_symbol * empty_blocks
 
-        return u'{0} {1}%'.format(progress_bar, progress)
+        return f"{progress_bar} {progress}%"

@@ -1,17 +1,17 @@
-from datetime import datetime, date, time, timedelta
+from datetime import date, datetime, time, timedelta
 
 from astral.sun import sun
 from pyluach import dates, hebrewcal, parshios
 from pytz import timezone
 
-from constant import JERUSALEM_CITY, TZ
+from hypb.constant import JERUSALEM_CITY, TISHREY, TZ
 
 
 def get_current_state(today=dates.HebrewDate.today()):
     days_count = 0
     total_days = 0
     # Tishrey and above
-    if today.month >= 7:
+    if today.month >= TISHREY:
         year = today.year
     else:
         year = today.year - 1
@@ -24,7 +24,7 @@ def get_current_state(today=dates.HebrewDate.today()):
         total_days += 1
     # then from Nissan to Elul
     for d in hebrewcal.Year(year + 1).iterdates():
-        if d.month >= 7:
+        if d.month >= TISHREY:
             continue
         if d <= today:
             days_count += 1

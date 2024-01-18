@@ -1,10 +1,10 @@
 import traceback
 
 from tweepy import Tweet
-from tweepy.asynchronous import AsyncStreamingClient, AsyncClient
+from tweepy.asynchronous import AsyncClient, AsyncStreamingClient
 
-from tweet_helper import get_text_to_reply
-from utils import send_async_alert
+from hypb.tweet_helper import get_text_to_reply
+from hypb.utils import send_async_alert
 
 
 class _AsyncStreamingClient(AsyncStreamingClient):

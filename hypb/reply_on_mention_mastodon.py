@@ -1,6 +1,6 @@
 import traceback
 
-from config import get_mastodon_stream_listener, get_mastodon_client
+from config import get_mastodon_client, get_mastodon_stream_listener
 from utils import send_alert
 
 
@@ -14,6 +14,6 @@ def reply():
             send_alert("exception: " + repr(e) + "\n" + traceback.format_exc())
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     print("starting...")
     reply()
