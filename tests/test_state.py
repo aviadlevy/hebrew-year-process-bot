@@ -1,7 +1,7 @@
 import pytest
 from pyluach import dates
 
-from src.dates_helper import get_current_state, get_holiday
+from hypb.dates_helper import get_current_state, get_holiday
 
 current_state_test_data = [
     (dates.HebrewDate(year=5780, month=7, day=1), 0),
