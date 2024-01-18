@@ -2,8 +2,8 @@ import random
 
 from mastodon import Mastodon
 
-from hypb.dates_helper import get_current_date, get_current_parashah
-from hypb.stream_listener_mastodon import _StreamingListener
+from src.dates_helper import get_current_date, get_current_parashah
+from src.stream_listener_mastodon import _StreamingListener
 
 
 class dotdict(dict):
