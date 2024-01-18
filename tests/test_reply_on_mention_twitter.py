@@ -4,8 +4,8 @@ import pytest
 from tweepy import Tweet
 from tweepy.asynchronous import AsyncClient
 
-from src.async_stream_client_twitter import _AsyncStreamingClient
-from src.dates_helper import get_current_date, get_current_parashah
+from hypb.async_stream_client_twitter import _AsyncStreamingClient
+from hypb.dates_helper import get_current_date, get_current_parashah
 
 
 def create_tweet(message, tweet_id, user_id=None):
@@ -40,7 +40,7 @@ async def test_date_heb(mocker):
 
 @pytest.mark.asyncio
 async def test_date_when_bot_tweeted(mocker):
-    spy, tweet_id = await base_flow(mocker, "What's the date?", 1234, 1234)
+    spy, _ = await base_flow(mocker, "What's the date?", 1234, 1234)
     spy.assert_not_called()
 
 
@@ -58,5 +58,5 @@ async def test_parashah_heb(mocker):
 
 @pytest.mark.asyncio
 async def test_unsupported_command(mocker):
-    spy, tweet_id = await base_flow(mocker, "What's up dude?", 1234, 4567)
+    spy, _ = await base_flow(mocker, "What's up dude?", 1234, 4567)
     spy.assert_not_called()

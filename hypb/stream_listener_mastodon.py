@@ -1,9 +1,9 @@
 import traceback
 
-from mastodon import StreamListener, Mastodon
+from mastodon import Mastodon, StreamListener
 
-from tweet_helper import get_text_to_reply
-from utils import send_alert
+from hypb.tweet_helper import get_text_to_reply
+from hypb.utils import send_alert
 
 
 class _StreamingListener(StreamListener):
@@ -14,7 +14,7 @@ class _StreamingListener(StreamListener):
         self.mastodon_client = mastodon_client
 
     def on_notification(self, notification):
-        if notification['type'] == 'mention':
+        if notification["type"] == "mention":
             try:
                 reply = get_text_to_reply(notification.status.content.lower())
                 if reply:

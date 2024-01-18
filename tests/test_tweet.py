@@ -3,13 +3,13 @@ import random
 
 import pytest
 
-from src.tweet_helper import should_tweet, get_last_state
+from hypb.tweet_helper import get_last_state, should_tweet
 
 
 def get_status(text, created_at=None):
     _json = {"content": "<p>" + text + "</p>", "id": random.randint(0, 100)}
     if created_at:
-        _json['created_at'] = created_at.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        _json["created_at"] = created_at.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
     return _json
 
 

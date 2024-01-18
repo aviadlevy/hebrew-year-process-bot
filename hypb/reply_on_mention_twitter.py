@@ -1,8 +1,9 @@
 import asyncio
+import sys
 
 from tweepy import StreamRule
 
-from config import get_async_twitter_stream
+from hypb.config import get_async_twitter_stream
 
 RULE_VALUE = "@yearprogressheb -is:retweet"
 RULE_TAG = "mentions tweets"
@@ -14,6 +15,6 @@ async def reply():
     await stream.filter(expansions=["author_id"])
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     print("starting...")
-    exit(asyncio.run(reply()))
+    sys.exit(asyncio.run(reply()))

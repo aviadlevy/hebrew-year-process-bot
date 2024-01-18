@@ -1,4 +1,4 @@
-FROM python:3.11-slim-buster as python-base
+FROM python:3.11-slim-buster AS python-base
 
 # https://python-poetry.org/docs#ci-recommendations
 ENV POETRY_VERSION=1.5.1
@@ -9,12 +9,12 @@ ENV POETRY_VENV=/opt/poetry-venv
 ENV POETRY_CACHE_DIR=/opt/.cache
 
 # Create stage for Poetry installation
-FROM python-base as poetry-base
+FROM python-base AS poetry-base
 
 # Creating a virtual environment just for poetry and install it with pip
-RUN python3 -m venv $POETRY_VENV \
-	&& $POETRY_VENV/bin/pip install -U pip setuptools \
-	&& $POETRY_VENV/bin/pip install poetry==${POETRY_VERSION}
+RUN python3 -m venv "$POETRY_VENV" \
+	&& "$POETRY_VENV"/bin/pip install -U pip setuptools \
+	&& "$POETRY_VENV"/bin/pip install poetry==${POETRY_VERSION}
 
 FROM python-base
 
@@ -28,4 +28,4 @@ COPY poetry.lock pyproject.toml ./
 RUN poetry check
 RUN poetry install --no-interaction --no-cache --without dev
 
-COPY src .
+COPY hypb .
