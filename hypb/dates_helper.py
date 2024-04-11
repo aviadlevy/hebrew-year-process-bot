@@ -1,51 +1,18 @@
 from datetime import date, datetime, time, timedelta
 
 from astral.sun import sun
-from pyluach import dates, hebrewcal, parshios
+from hdate import HDate, HebrewDate, converters as conv
+from hdate.htables import Months
 from pytz import timezone
 
-from hypb.constant import JERUSALEM_CITY, TISHREY, TZ
+from hypb.constant import JERUSALEM_CITY, TZ
 
 
-def get_current_state(today=dates.HebrewDate.today()):
-    days_count = 0
-    total_days = 0
-    # Tishrey and above
-    if today.month >= TISHREY:
-        year = today.year
-    else:
-        year = today.year - 1
-    # first from Tishrey to Adar
-    for d in hebrewcal.Year(year).iterdates():
-        if d.month == 1:
-            break
-        if d <= today:
-            days_count += 1
-        total_days += 1
-    # then from Nissan to Elul
-    for d in hebrewcal.Year(year + 1).iterdates():
-        if d.month >= TISHREY:
-            continue
-        if d <= today:
-            days_count += 1
-        total_days += 1
+def get_current_state(today=HDate()):
+    rosh_hashana = HebrewDate(today.hdate.year, Months.TISHREI, 1)
+    days_count = conv.gdate_to_jdn(today.gdate) - conv.hdate_to_jdn(rosh_hashana) + 1
+    total_days = today.year_size()
     return int((days_count / total_days) * 100)
-
-
-def get_holiday(d=dates.HebrewDate.today()):
-    """
-    If not fast today, check if tomorrow is a holiday
-
-    :param d: the date to check. typeof `dates.HebrewDate` from `pyluach`
-    :return: tuple (name => string, is_holiday => bool) or None if no holiday
-    """
-    fast_day = hebrewcal.fast_day(d)
-    if fast_day:
-        return fast_day, False
-    holiday = hebrewcal.holiday(d + 1, israel=True)
-    if holiday:
-        return holiday, True
-    return None, None
 
 
 def get_midnight(tz):
@@ -59,25 +26,16 @@ def is_past_tzet_hakohavim_and_before_midnight(now, tz="UTC"):
 
 
 def get_current_date(lang="eng") -> str:
-    d = get_today_heb_date()
-    if lang == "heb":
-        return f"{d:%*d %*B %*Y}"
-    else:
-        return f"{d:%-d %B %Y}"
+    return get_hdate_from_pydate(lang=lang).hebrew_date
 
 
-def get_today_heb_date():
-    now_tz = datetime.now(timezone(TZ))
-    d = get_heb_date_from_pydate(now_tz)
-    return d
-
-
-def get_heb_date_from_pydate(d: datetime):
-    heb_date = dates.GregorianDate.from_pydate(d).to_heb()
-    if is_past_tzet_hakohavim_and_before_midnight(d, tz=TZ):
-        heb_date += 1
+def get_hdate_from_pydate(now_tz=datetime.now(timezone(TZ)), lang="eng"):
+    heb_date = HDate(gdate=now_tz, hebrew=lang == "heb")
+    if is_past_tzet_hakohavim_and_before_midnight(now_tz, tz=TZ):
+        now_tz = now_tz + timedelta(days=1)
+        heb_date = HDate(gdate=now_tz, hebrew=lang == "heb")
     return heb_date
 
 
 def get_current_parashah(lang="eng") -> str:
-    return parshios.getparsha_string(get_today_heb_date(), hebrew=(lang == "heb"))
+    return get_hdate_from_pydate(lang=lang).parasha

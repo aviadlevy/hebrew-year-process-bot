@@ -13,14 +13,14 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.11"
-astral = "^3.2"
+aiohttp = "^3.9.3"
+astral = "<3.0"
 async-lru = "^2.0.4"
+hdate = "^0.10.8"
 mastodon-py = "~1.8.1"
-pyluach = "^2.2.0"
-pytz = "^2023.3"
-tweepy = "^4.14.0"
-aiohttp = "^3.9.2"
+pytz = "^2024.1"
 requests = "^2.31.0"
+tweepy = "^4.14.0"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -35,13 +35,14 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 
-[tool.ruff]
+[tool.ruff.lint]
 select = [
     "B002", # Python does not support the unary prefix increment
     "B007", # Loop control variable {name} not used within loop body
     "B014", # Exception handler with duplicate exception
     "B023", # Function definition does not bind loop variable {name}
     "B026", # Star-arg unpacking after a keyword argument is strongly discouraged
+    "B904", # Use raise from to specify exception cause
     "C",  # complexity
     "COM818", # Trailing comma on bare tuple prohibited
     "DTZ003",  # Use datetime.now(tz=) instead of datetime.utcnow()
@@ -54,7 +55,6 @@ select = [
     "N804", # First argument of a class method should be named cls
     "N805", # First argument of a method should be named self
     "N815", # Variable {name} in class scope should not be mixedCase
-    "PGH001", # No builtin eval() allowed
     "PGH004",  # Use specific rule codes when using noqa
     "PLC0414", # Useless import alias. Import alias does not rename original package.
     "PLC", # pylint
@@ -92,7 +92,6 @@ select = [
     "T100", # Trace found: {name} used
     "TID251", # Banned imports
     "TRY004", # Prefer TypeError exception for invalid type
-    "TRY200", # Use raise from to specify exception cause
     "TRY302", # Remove exception handler; error is immediately re-raised
     "UP",  # pyupgrade
     "W",  # pycodestyle
@@ -102,14 +101,14 @@ ignore = [
     "E501", # line too long
 ]
 
-[tool.ruff.flake8-pytest-style]
+[tool.ruff.lint.flake8-pytest-style]
 fixture-parentheses = false
 
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 known-first-party = ["hypb"]
 combine-as-imports = true
 split-on-trailing-comma = false
 
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "tests/*" = ["PLR2004"]
