@@ -26,6 +26,7 @@ WORKDIR /app
 COPY poetry.lock pyproject.toml ./
 
 RUN poetry check
-RUN poetry install --no-interaction --no-cache --without dev
+RUN poetry config virtualenvs.in-project true
+RUN poetry install --no-ansi --without dev
 
 COPY hypb .
