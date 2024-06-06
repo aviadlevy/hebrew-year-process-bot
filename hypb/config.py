@@ -2,11 +2,10 @@ import asyncio
 import functools
 import os
 
+from async_stream_client_twitter import _AsyncStreamingClient
 from mastodon import Mastodon
+from stream_listener_mastodon import _StreamingListener
 from tweepy.asynchronous import AsyncClient
-
-from hypb.async_stream_client_twitter import _AsyncStreamingClient
-from hypb.stream_listener_mastodon import _StreamingListener
 
 USER_ID = 1099727648471871490
 
