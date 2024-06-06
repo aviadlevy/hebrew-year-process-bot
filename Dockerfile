@@ -22,7 +22,10 @@ COPY --from=poetry-base ${POETRY_VENV} ${POETRY_VENV}
 
 ENV PATH="${PATH}:${POETRY_VENV}/bin"
 
-WORKDIR /app
+WORKDIR /hypb
+
+ENV PYTHONPATH "${PYTHONPATH}:/hypb"
+
 COPY poetry.lock pyproject.toml ./
 
 RUN poetry check

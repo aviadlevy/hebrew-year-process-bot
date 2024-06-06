@@ -1,11 +1,10 @@
 from datetime import date, datetime, time, timedelta
 
 from astral.sun import sun
+from constant import JERUSALEM_CITY, TZ
 from hdate import HDate, HebrewDate, converters as conv
 from hdate.htables import Months
 from pytz import timezone
-
-from hypb.constant import JERUSALEM_CITY, TZ
 
 
 def get_current_state(today=HDate()):
