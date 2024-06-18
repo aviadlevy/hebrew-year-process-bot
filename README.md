@@ -1,6 +1,6 @@
 # Hebrew Year Progress
 
-[![Testing the app](https://github.com/aviadlevy/hebrew-year-process-bot/actions/workflows/testing.yaml/badge.svg)](https://github.com/aviadlevy/hebrew-year-process-bot/actions/workflows/testing.yaml) [![codecov](https://codecov.io/gh/aviadlevy/hebrew-year-process-bot/branch/master/graph/badge.svg?token=VN6BY02U4Z)](https://codecov.io/gh/aviadlevy/hebrew-year-process-bot)  
+[![Testing the app](https://github.com/aviadlevy/hebrew-year-process-bot/actions/workflows/testing.yaml/badge.svg)](https://github.com/aviadlevy/hebrew-year-process-bot/actions/workflows/testing.yaml) [![Tweet](https://github.com/aviadlevy/hebrew-year-process-bot/actions/workflows/tweet.yaml/badge.svg)](https://github.com/aviadlevy/hebrew-year-process-bot/actions/workflows/tweet.yaml) [![codecov](https://codecov.io/gh/aviadlevy/hebrew-year-process-bot/branch/master/graph/badge.svg?token=VN6BY02U4Z)](https://codecov.io/gh/aviadlevy/hebrew-year-process-bot)  
 
 Bot inspired by [@year_progress](https://twitter.com/year_progress).  
 This bot publish the progress of the Hebrew calendar year.  
