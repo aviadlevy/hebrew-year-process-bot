@@ -20,13 +20,13 @@ def get_heb_parashah():
 
 
 def get_eng_yom_tov():
-    upcoming_yom_tov = get_upcoming_yom_tov(lang='eng')
+    upcoming_yom_tov = get_upcoming_yom_tov(lang="eng")
     days_delta = (upcoming_yom_tov.gdate - datetime.datetime.now().date()).days
     return f"The upcoming Yom Tov is {upcoming_yom_tov.holiday_description} and it'll arrive in {days_delta} days"
 
 
 def get_heb_yom_tov():
-    upcoming_yom_tov = get_upcoming_yom_tov(lang='heb')
+    upcoming_yom_tov = get_upcoming_yom_tov(lang="heb")
     days_delta = (upcoming_yom_tov.gdate - datetime.datetime.now().date()).days
     return f"החג הקרוב הוא {upcoming_yom_tov.holiday_description}. החג יגיע בעוד {days_delta} ימים"
 
