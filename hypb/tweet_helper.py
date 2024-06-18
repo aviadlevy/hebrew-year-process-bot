@@ -31,3 +31,8 @@ def get_text_to_reply(text):
         return MESSAGES["parashah"]["eng"]()
     elif any(x in text for x in ["פרשה", "פרשת"]):
         return MESSAGES["parashah"]["heb"]()
+    elif any(x in text for x in ["holiday", "yom tov"]):
+        return MESSAGES["yom_tov"]["eng"]()
+    elif any(x in text for x in ["חג", "יום טוב"]):
+        return MESSAGES["yom_tov"]["heb"]()
+

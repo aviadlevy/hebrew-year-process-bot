@@ -28,7 +28,7 @@ def get_current_date(lang="eng") -> str:
     return get_hdate_from_pydate(lang=lang).hebrew_date
 
 
-def get_hdate_from_pydate(now_tz=datetime.now(timezone(TZ)), lang="eng"):
+def get_hdate_from_pydate(now_tz=datetime.now(timezone(TZ)), lang="eng") -> HDate:
     heb_date = HDate(gdate=now_tz, hebrew=lang == "heb")
     if is_past_tzet_hakohavim_and_before_midnight(now_tz, tz=TZ):
         now_tz = now_tz + timedelta(days=1)
@@ -38,3 +38,7 @@ def get_hdate_from_pydate(now_tz=datetime.now(timezone(TZ)), lang="eng"):
 
 def get_current_parashah(lang="eng") -> str:
     return get_hdate_from_pydate(lang=lang).parasha
+
+
+def get_upcoming_yom_tov(lang="eng") -> str:
+    return get_hdate_from_pydate(lang=lang).upcoming_yom_tov

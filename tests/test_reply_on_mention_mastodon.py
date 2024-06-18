@@ -3,6 +3,7 @@ import random
 from mastodon import Mastodon
 
 from hypb.dates_helper import get_current_date, get_current_parashah
+from hypb.lang import get_eng_yom_tov, get_heb_yom_tov
 from hypb.stream_listener_mastodon import _StreamingListener
 
 
@@ -60,6 +61,18 @@ def test_parashah_heb(mocker):
     spy, notification_status = base_flow(mocker, "מה פרשת השבוע?")
     spy.assert_called_once_with(to_status=notification_status,
                                 status=f"פרשת השבוע היא פרשת {get_current_parashah(lang='heb')}")
+
+
+def test_upcoming_yom_tov(mocker):
+    spy, notification_status = base_flow(mocker, "What's the Yom Tov?")
+    spy.assert_called_once_with(to_status=notification_status,
+                                status=get_eng_yom_tov())
+
+
+def test_upcoming_yom_tov_heb(mocker):
+    spy, notification_status = base_flow(mocker, "מה החג הקרוב?")
+    spy.assert_called_once_with(to_status=notification_status,
+                                status=get_heb_yom_tov())
 
 
 def test_unsupported_command(mocker):
