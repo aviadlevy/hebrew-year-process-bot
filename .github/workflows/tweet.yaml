@@ -53,4 +53,4 @@ jobs:
           token: ${{ secrets.TELEGRAM_TOKEN }}
           message: |
             Job failed :(
-            https://github.com/aviadlevy/hebrew-year-process-bot/actions
+            https://github.com/aviadlevy/hebrew-year-process-bot/actions/workflows/tweet.yaml
