@@ -6,10 +6,7 @@ see here: http://pythoncentral.io/how-to-movecopy-a-file-or-directory-folder-wit
 
 class ProgressBar:
     def __init__(self, width=20, progress_symbol="▓", empty_symbol="░"):
-        self.width = width
-
-        if self.width < 0:
-            self.width = 0
+        self.width = max(width, 0)
 
         self.progress_symbol = progress_symbol
         self.empty_symbol = empty_symbol
