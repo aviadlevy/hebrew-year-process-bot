@@ -42,10 +42,6 @@ jobs:
           python hypb/tweet_progress.py
 
       - name: Alert on failure
-        env:
-          GITHUB_SERVER_URL: $GITHUB_SERVER_URL
-          GITHUB_REPOSITORY: $GITHUB_REPOSITORY
-
         if: failure()
         uses: appleboy/telegram-action@master
         with:
