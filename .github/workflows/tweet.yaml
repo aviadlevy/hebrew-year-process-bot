@@ -49,4 +49,4 @@ jobs:
           token: ${{ secrets.TELEGRAM_TOKEN }}
           message: |
             Job failed :(
-            "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
