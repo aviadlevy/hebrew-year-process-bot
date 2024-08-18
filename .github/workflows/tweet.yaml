@@ -53,4 +53,4 @@ jobs:
           token: ${{ secrets.TELEGRAM_TOKEN }}
           message: |
             Job failed :(
-            ${{env.GITHUB_SERVER_URL}}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
+            https://github.com/aviadlevy/hebrew-year-process-bot/actions
