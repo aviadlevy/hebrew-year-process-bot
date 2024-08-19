@@ -9,8 +9,7 @@ TELEGRAM_API_URL = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
 
 
 async def send_async_alert(msg):
-    async with aiohttp.ClientSession() as session, session.post(TELEGRAM_API_URL,
-                                                                json={"chat_id": CHAT_ID, "text": msg}) as response:
+    async with aiohttp.ClientSession() as session, session.post(TELEGRAM_API_URL, json={"chat_id": CHAT_ID, "text": msg}) as response:
         return await response.text()
 
 

@@ -12,8 +12,7 @@ def get_last_state(toots):
     :return:
     """
     for toot in toots:
-        match = re.match(r"^<p>[%s%s]{%d}\s(\d+)" % (EMPTY_SYMBOL, PROGRESS_SYMBOL, PROGRESS_BAR_WIDTH) + "%</p>$",
-                         toot["content"])
+        match = re.match(r"^<p>[%s%s]{%d}\s(\d+)" % (EMPTY_SYMBOL, PROGRESS_SYMBOL, PROGRESS_BAR_WIDTH) + "%</p>$", toot["content"])
         if match:
             return int(match.group(1))
 
@@ -35,4 +34,3 @@ def get_text_to_reply(text):
         return MESSAGES["yom_tov"]["eng"]()
     elif any(x in text for x in ["חג", "יום טוב"]):
         return MESSAGES["yom_tov"]["heb"]()
-

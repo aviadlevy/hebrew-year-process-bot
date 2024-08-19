@@ -32,16 +32,7 @@ def get_heb_yom_tov():
 
 
 MESSAGES = {
-    "date": {
-        "heb": get_heb_date,
-        "eng": get_eng_date
-    },
-    "parashah": {
-        "heb": get_heb_parashah,
-        "eng": get_eng_parashah
-    },
-    "yom_tov": {
-        "heb": get_heb_yom_tov,
-        "eng": get_eng_yom_tov
-    }
+    "date": {"heb": get_heb_date, "eng": get_eng_date},
+    "parashah": {"heb": get_heb_parashah, "eng": get_eng_parashah},
+    "yom_tov": {"heb": get_heb_yom_tov, "eng": get_eng_yom_tov},
 }
