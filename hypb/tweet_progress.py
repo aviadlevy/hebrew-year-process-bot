@@ -3,7 +3,7 @@ import sys
 import traceback
 
 from config import get_async_twitter_client, get_mastodon_client, run_in_executor
-from constant import EMPTY_SYMBOL, PROGRESS_BAR_WIDTH, PROGRESS_SYMBOL
+from constant import EMPTY_SYMBOL, MASTODON_USER_ID, PROGRESS_BAR_WIDTH, PROGRESS_SYMBOL
 from dates_helper import get_current_state
 from progress_bar import ProgressBar
 from tweet_helper import get_last_state, should_tweet
@@ -23,7 +23,7 @@ def toot(mastodon_client, text):
 
 
 @run_in_executor
-def timeline_home(mastodon_client, limit=None):
+def account_statuses(mastodon_client, limit=None):
     """
     wrapper of asyncio to blocking library
 
@@ -31,12 +31,11 @@ def timeline_home(mastodon_client, limit=None):
     :param mastodon_client: blocking client of mastodon
     :return:
     """
-    return mastodon_client.timeline_home(limit=limit)
+    return mastodon_client.account_statuses(id=MASTODON_USER_ID, limit=limit)
 
 
 def get_progress_bar(current_state):
-    return ProgressBar(width=PROGRESS_BAR_WIDTH, progress_symbol=PROGRESS_SYMBOL, empty_symbol=EMPTY_SYMBOL).update(
-        current_state)
+    return ProgressBar(width=PROGRESS_BAR_WIDTH, progress_symbol=PROGRESS_SYMBOL, empty_symbol=EMPTY_SYMBOL).update(current_state)
 
 
 async def tweet():
@@ -45,7 +44,7 @@ async def tweet():
     twitter_client = get_async_twitter_client()
     mastodon_client = get_mastodon_client()
 
-    timeline = await timeline_home(mastodon_client, limit=10)
+    timeline = await account_statuses(mastodon_client, limit=50)
     try:
         last_state = get_last_state(timeline)
     except Exception as e:

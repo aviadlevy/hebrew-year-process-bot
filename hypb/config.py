@@ -3,25 +3,26 @@ import functools
 import os
 
 from async_stream_client_twitter import _AsyncStreamingClient
+from constant import TWITTER_USER_ID
 from mastodon import Mastodon
 from stream_listener_mastodon import _StreamingListener
 from tweepy.asynchronous import AsyncClient
 
-USER_ID = 1099727648471871490
-
 
 def get_async_twitter_client():
-    return AsyncClient(access_token=os.environ["ACCESS_KEY"], access_token_secret=os.environ["ACCESS_SECRET"],
-                       consumer_key=os.environ["CONSUMER_KEY"], consumer_secret=os.environ["CONSUMER_SECRET"],
-                       wait_on_rate_limit=True)
+    return AsyncClient(
+        access_token=os.environ["ACCESS_KEY"],
+        access_token_secret=os.environ["ACCESS_SECRET"],
+        consumer_key=os.environ["CONSUMER_KEY"],
+        consumer_secret=os.environ["CONSUMER_SECRET"],
+        wait_on_rate_limit=True,
+    )
 
 
 def get_async_twitter_stream():
     return _AsyncStreamingClient(
-        async_client=get_async_twitter_client(),
-        user_id=USER_ID,
-        bearer_token=os.environ["BEARER_TOKEN"],
-        wait_on_rate_limit=True)
+        async_client=get_async_twitter_client(), user_id=TWITTER_USER_ID, bearer_token=os.environ["BEARER_TOKEN"], wait_on_rate_limit=True
+    )
 
 
 def get_mastodon_stream_listener(mastodon_client):
