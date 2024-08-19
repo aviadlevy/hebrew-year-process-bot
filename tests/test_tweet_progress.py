@@ -2,7 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from hypb.tweet_progress import get_progress_bar, timeline_home, toot, tweet
+from hypb.tweet_progress import account_statuses, get_progress_bar, toot, tweet
 
 FIFTY_PRECENT_BAR = "▓▓▓▓▓▓▓▓░░░░░░░ 50%"
 
@@ -18,12 +18,12 @@ async def test_toot(mocker):
 
 
 @pytest.mark.asyncio
-async def test_timeline_home(mocker):
+async def test_account_statuses(mocker):
     mastodon_client = MagicMock()
-    mastodon_client.timeline_home.return_value = ["Toot 1", "Toot 2"]
+    mastodon_client.account_statuses.return_value = ["Toot 1", "Toot 2"]
 
-    with patch("tweet_progress.run_in_executor", return_value=timeline_home):
-        result = await timeline_home(mastodon_client)
+    with patch("tweet_progress.run_in_executor", return_value=account_statuses):
+        result = await account_statuses(mastodon_client)
         assert result == ["Toot 1", "Toot 2"]
 
 
@@ -49,7 +49,7 @@ async def test_tweet(mocker):
 
     mocker.patch("hypb.tweet_progress.get_async_twitter_client", return_value=mock_twitter_client)
     mocker.patch("hypb.tweet_progress.get_mastodon_client", return_value=mock_mastodon_client)
-    mock_mastodon_client.timeline_home.return_value = [{"content": "<p>▓▓▓▓▓▓▓▓░░░░░░░ 49%</p>"},
+    mock_mastodon_client.account_statuses.return_value = [{"content": "<p>▓▓▓▓▓▓▓▓░░░░░░░ 49%</p>"},
                                                        {"content": "<p>▓▓▓▓▓▓▓▓░░░░░░░ 48%</p>"}]
     mock_twitter_client.create_tweet.return_value = mock_create_tweet()
     mock_mastodon_client.toot.return_value = "Toot"
