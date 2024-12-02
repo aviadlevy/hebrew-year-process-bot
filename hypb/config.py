@@ -30,7 +30,7 @@ def get_mastodon_stream_listener(mastodon_client):
 
 
 def get_mastodon_client():
-    return Mastodon(access_token=os.environ["MASTODON_ACCESS_TOKEN"], api_base_url="https://botsin.space")
+    return Mastodon(access_token=os.environ["MASTODON_ACCESS_TOKEN"], api_base_url=os.environ["MASTODON_BASE_URL"])
 
 
 def run_in_executor(f):

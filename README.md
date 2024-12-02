@@ -15,9 +15,9 @@ This bot publish the progress of the Hebrew calendar year.
 
 ## Mastodon
 
-[@yearProgressHeb](https://botsin.space/@yearProgressHeb). 
+[@yearProgressHeb](https://mastodon.social/@yearProgressHeb). 
 
 <div class="center">
-<blockquote class="twitter-tweet" data-lang="en"><p lang="und" dir="ltr">▓▓░░░░░░░░░░░░░ 15%</p>&mdash; Hebrew Year Progress (@yearProgressHeb) <a href="https://botsin.space/@yearProgressHeb/109376451284319991">Nov 20, 2022, 15:49</a></blockquote>
+<blockquote class="twitter-tweet" data-lang="en"><p lang="und" dir="ltr">▓▓░░░░░░░░░░░░░ 17%</p>&mdash; Hebrew Year Progress (@yearProgressHeb) <a href="https://mastodon.social/@yearProgressHeb/113585373770390214">Dec 02, 2024</a></blockquote>
 </div>
 
