@@ -1,10 +1,9 @@
 import asyncio
-import os
 import sys
 import traceback
 
 from config import get_async_twitter_client, get_mastodon_client, run_in_executor
-from constant import EMPTY_SYMBOL, PROGRESS_BAR_WIDTH, PROGRESS_SYMBOL
+from constant import EMPTY_SYMBOL, MASTODON_USER_ID, PROGRESS_BAR_WIDTH, PROGRESS_SYMBOL
 from dates_helper import get_current_state
 from progress_bar import ProgressBar
 from tweet_helper import get_last_state, should_tweet
@@ -32,7 +31,7 @@ def account_statuses(mastodon_client, limit=None):
     :param mastodon_client: blocking client of mastodon
     :return:
     """
-    return mastodon_client.account_statuses(id=os.environ["MASTODON_USER_ID"], limit=limit)
+    return mastodon_client.account_statuses(id=MASTODON_USER_ID, limit=limit)
 
 
 def get_progress_bar(current_state):

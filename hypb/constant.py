@@ -1,3 +1,5 @@
+import os
+
 from astral import LocationInfo
 
 PROGRESS_BAR_WIDTH = 15
@@ -12,3 +14,4 @@ TISHREY = 7
 
 
 TWITTER_USER_ID = 1099727648471871490
+MASTODON_USER_ID = os.getenv("MASTODON_USER_ID", "")
