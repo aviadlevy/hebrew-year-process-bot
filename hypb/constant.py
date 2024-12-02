@@ -1,5 +1,3 @@
-import os
-
 from astral import LocationInfo
 
 PROGRESS_BAR_WIDTH = 15
