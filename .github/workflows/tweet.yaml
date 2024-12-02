@@ -36,8 +36,8 @@ jobs:
           ACCESS_SECRET: ${{secrets.ACCESS_SECRET}}
           BEARER_TOKEN: ${{secrets.BEARER_TOKEN}}
           MASTODON_ACCESS_TOKEN: ${{secrets.MASTODON_ACCESS_TOKEN}}
-          MASTODON_BASE_URL: ${{env.MASTODON_BASE_URL}}
-          MASTODON_USER_ID: ${{env.MASTODON_USER_ID}}
+          MASTODON_BASE_URL: '${{env.MASTODON_BASE_URL}}'
+          MASTODON_USER_ID: '${{env.MASTODON_USER_ID}}'
         run: |
           source .venv/bin/activate
           export PYTHONPATH=${PWD}
