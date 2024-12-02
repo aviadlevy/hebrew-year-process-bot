@@ -12,7 +12,7 @@ def get_last_state(toots):
     :return:
     """
     for toot in toots:
-        match = re.match(r"^<p>[%s%s]{%d}\s(\d+)" % (EMPTY_SYMBOL, PROGRESS_SYMBOL, PROGRESS_BAR_WIDTH) + "%</p>$", toot["content"])
+        match = re.match(r"^<p>[%s%s]{%d}\s(\d+)" % (EMPTY_SYMBOL, PROGRESS_SYMBOL, PROGRESS_BAR_WIDTH) + "%</p>$", toot["content"])  # noqa: UP031
         if match:
             return int(match.group(1))
 
