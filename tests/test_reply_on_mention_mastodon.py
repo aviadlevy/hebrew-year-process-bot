@@ -63,13 +63,13 @@ def test_parashah_heb(mocker):
                                 status=f"פרשת השבוע היא פרשת {get_current_parashah(lang='heb')}")
 
 
-def test_upcoming_yom_tov(mocker):
+def test_upcoming_holiday(mocker):
     spy, notification_status = base_flow(mocker, "What's the Yom Tov?")
     spy.assert_called_once_with(to_status=notification_status,
                                 status=get_eng_yom_tov())
 
 
-def test_upcoming_yom_tov_heb(mocker):
+def test_upcoming_holiday_heb(mocker):
     spy, notification_status = base_flow(mocker, "מה החג הקרוב?")
     spy.assert_called_once_with(to_status=notification_status,
                                 status=get_heb_yom_tov())

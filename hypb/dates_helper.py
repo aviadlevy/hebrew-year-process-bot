@@ -2,7 +2,7 @@ from datetime import date, datetime, time, timedelta
 
 from astral.sun import sun
 from constant import JERUSALEM_CITY, TZ
-from hdate import HDate, HebrewDate, converters as conv
+from hdate import HDate, HebrewDate, HolidayTypes, converters as conv
 from hdate.htables import Months
 from pytz import timezone
 
@@ -40,5 +40,10 @@ def get_current_parashah(lang="eng") -> str:
     return get_hdate_from_pydate(lang=lang).parasha
 
 
-def get_upcoming_yom_tov(lang="eng") -> str:
-    return get_hdate_from_pydate(lang=lang).upcoming_yom_tov
+def get_upcoming_holiday(lang="eng") -> tuple[HDate, int]:
+    iter_date = get_hdate_from_pydate(lang=lang)
+    days_delta = 0
+    while iter_date.holiday_type not in [HolidayTypes.YOM_TOV, HolidayTypes.MELACHA_PERMITTED_HOLIDAY]:
+        iter_date = iter_date.next_day
+        days_delta += 1
+    return iter_date, days_delta

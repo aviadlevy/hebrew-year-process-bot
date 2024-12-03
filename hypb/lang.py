@@ -1,6 +1,5 @@
-import datetime
 
-from dates_helper import get_current_date, get_current_parashah, get_upcoming_yom_tov
+from dates_helper import get_current_date, get_current_parashah, get_upcoming_holiday
 
 
 def get_eng_date():
@@ -20,15 +19,13 @@ def get_heb_parashah():
 
 
 def get_eng_yom_tov():
-    upcoming_yom_tov = get_upcoming_yom_tov(lang="eng")
-    days_delta = (upcoming_yom_tov.gdate - datetime.datetime.now().date()).days
-    return f"The upcoming Yom Tov is {upcoming_yom_tov.holiday_description} and it'll arrive in {days_delta} days"
+    upcoming_holiday, days_delta = get_upcoming_holiday(lang="eng")
+    return f"The upcoming holiday is {upcoming_holiday.holiday_description} and it'll arrive in {days_delta} days"
 
 
 def get_heb_yom_tov():
-    upcoming_yom_tov = get_upcoming_yom_tov(lang="heb")
-    days_delta = (upcoming_yom_tov.gdate - datetime.datetime.now().date()).days
-    return f"החג הקרוב הוא {upcoming_yom_tov.holiday_description}. החג יגיע בעוד {days_delta} ימים"
+    upcoming_holiday, days_delta = get_upcoming_holiday(lang="heb")
+    return f"החג הקרוב הוא {upcoming_holiday.holiday_description}. החג יגיע בעוד {days_delta} ימים"
 
 
 MESSAGES = {
