@@ -27,6 +27,7 @@ WORKDIR /hypb
 ENV PYTHONPATH "${PYTHONPATH}:/hypb"
 
 COPY poetry.lock pyproject.toml ./
+COPY README.md ./
 
 RUN poetry check
 RUN poetry config virtualenvs.in-project true
