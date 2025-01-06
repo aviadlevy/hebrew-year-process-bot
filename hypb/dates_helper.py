@@ -7,7 +7,9 @@ from hdate.htables import Months
 from pytz import timezone
 
 
-def get_current_state(today=HDate()):
+def get_current_state(today=None):
+    if not today:
+        today = HDate()
     rosh_hashana = HebrewDate(today.hdate.year, Months.TISHREI, 1)
     days_count = conv.gdate_to_jdn(today.gdate) - conv.hdate_to_jdn(rosh_hashana) + 1
     total_days = today.year_size()
@@ -28,7 +30,9 @@ def get_current_date(lang="eng") -> str:
     return get_hdate_from_pydate(lang=lang).hebrew_date
 
 
-def get_hdate_from_pydate(now_tz=datetime.now(timezone(TZ)), lang="eng") -> HDate:
+def get_hdate_from_pydate(now_tz=None, lang="eng") -> HDate:
+    if not now_tz:
+        now_tz = datetime.now(timezone(TZ)
     heb_date = HDate(gdate=now_tz, hebrew=lang == "heb")
     if is_past_tzet_hakohavim_and_before_midnight(now_tz, tz=TZ):
         now_tz = now_tz + timedelta(days=1)
