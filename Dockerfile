@@ -1,7 +1,7 @@
 FROM python:3.11-slim-buster AS python-base
 
 # https://python-poetry.org/docs#ci-recommendations
-ENV POETRY_VERSION=1.5.1
+ENV POETRY_VERSION=1.8.3
 ENV POETRY_HOME=/opt/poetry
 ENV POETRY_VENV=/opt/poetry-venv
 
@@ -27,6 +27,7 @@ WORKDIR /hypb
 ENV PYTHONPATH "${PYTHONPATH}:/hypb"
 
 COPY poetry.lock pyproject.toml ./
+COPY README.md ./
 
 RUN poetry check
 RUN poetry config virtualenvs.in-project true
