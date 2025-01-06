@@ -32,7 +32,7 @@ def get_current_date(lang="eng") -> str:
 
 def get_hdate_from_pydate(now_tz=None, lang="eng") -> HDate:
     if not now_tz:
-        now_tz = datetime.now(timezone(TZ)
+        now_tz = datetime.now(timezone(TZ))
     heb_date = HDate(gdate=now_tz, hebrew=lang == "heb")
     if is_past_tzet_hakohavim_and_before_midnight(now_tz, tz=TZ):
         now_tz = now_tz + timedelta(days=1)
