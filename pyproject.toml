@@ -1,6 +1,6 @@
 [project]
 name = "hebrew-year-process-bot"
-authors = ["aviadlevy <aviadlevy1@gmail.com>"]
+authors = [{ name = "aviadlevy", email = "aviadlevy1@gmail.com" }]
 readme = "README.md"
 license = "LICENSE"
 
