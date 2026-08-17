@@ -11,6 +11,7 @@ from hypb.constant import (
 )
 from hypb.dates_helper import get_current_state
 from hypb.progress_bar import ProgressBar
+from hypb.settings import REQUIRED_PROGRESS_VARS, require
 from hypb.tweet_helper import get_last_state, should_tweet
 from hypb.utils import send_async_alert
 
@@ -66,5 +67,10 @@ async def tweet():
     return 0
 
 
+def main() -> int:
+    require(REQUIRED_PROGRESS_VARS)
+    return asyncio.run(tweet())
+
+
 if __name__ == "__main__":
-    sys.exit(asyncio.run(tweet()))
+    sys.exit(main())
