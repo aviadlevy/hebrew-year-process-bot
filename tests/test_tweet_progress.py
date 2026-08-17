@@ -2,7 +2,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from hypb.tweet_progress import account_statuses, get_progress_bar, toot, tweet
+from hypb.settings import REQUIRED_PROGRESS_VARS
+from hypb.tweet_progress import account_statuses, get_progress_bar, main, toot, tweet
 
 FIFTY_PRECENT_BAR = "▓▓▓▓▓▓▓▓░░░░░░░ 50%"
 
@@ -59,3 +60,11 @@ async def test_tweet(mocker):
     assert result == 0
     mock_twitter_client.create_tweet.assert_called_with(text=FIFTY_PRECENT_BAR)
     mock_mastodon_client.toot.assert_called_with(FIFTY_PRECENT_BAR)
+
+
+def test_main_returns_2_on_missing_config(monkeypatch):
+    """main() must fail fast on missing config, before ever reaching asyncio.run(tweet())."""
+    for var in REQUIRED_PROGRESS_VARS:
+        monkeypatch.delenv(var, raising=False)
+
+    assert main() == 2
