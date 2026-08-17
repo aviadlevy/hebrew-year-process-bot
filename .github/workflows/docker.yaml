@@ -112,13 +112,16 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        env:
+          DOCKER_METADATA_ANNOTATIONS_LEVELS: index
 
       - name: Create manifest list and push
         working-directory: /tmp/digests
         run: |
-          # shellcheck disable=SC2046 # word splitting is intentional: jq/printf each expand to multiple positional args
+          readarray -t ANNOTATIONS < <(jq -r '.annotations[]? | "--annotation=" + .' <<< "$DOCKER_METADATA_OUTPUT_JSON")
+          # shellcheck disable=SC2046 # word splitting is intentional: tags never contain spaces
           docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(jq -cr '.annotations | map("--annotation " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            "${ANNOTATIONS[@]}" \
             $(printf '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@sha256:%s ' *)
 
       - name: Inspect image
