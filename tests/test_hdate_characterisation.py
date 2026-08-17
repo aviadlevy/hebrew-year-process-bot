@@ -1,9 +1,12 @@
 """Locks the bot's user-visible output across the hdate 0.11 -> 1.2 upgrade.
 
 Every expected value here was produced by running the real dates_helper logic
-under BOTH hdate 0.11.1 and 1.2.1; all of them are identical across the two.
-If a test in this file fails after the upgrade, the migration changed what the
-bot says to users. Fix the migration, never the assertion.
+under BOTH hdate 0.11.1 and 1.2.1. Most are identical across the two; the
+`get_upcoming_holiday` rows for 30 Kislev are a documented exception — see the
+comment above them for why hdate 1.x's answer there is a bug fix, not a
+regression. If a test in this file fails after the upgrade for any other
+reason, the migration changed what the bot says to users. Fix the migration,
+never the assertion.
 """
 
 from datetime import datetime
@@ -19,11 +22,6 @@ from hypb.dates_helper import (
 )
 
 
-def holiday_name(holiday):
-    """Return the holiday's display name under either hdate major version."""
-    return holiday if isinstance(holiday, str) else holiday.holiday_description
-
-
 def at(year, month, day, hour, minute):
     return timezone(TZ).localize(datetime(year, month, day, hour, minute))
 
@@ -35,6 +33,8 @@ YOM_TOV = at(2026, 9, 12, 10, 0)
 MELACHA_PERMITTED = at(2026, 12, 6, 10, 0)
 LEAP_ADAR_I = at(2027, 2, 15, 10, 0)
 LEAP_ADAR_II = at(2027, 3, 15, 10, 0)
+CHANUKAH_ROSH_CHODESH = at(2026, 12, 10, 10, 0)
+SHMINI_ATZERET = at(2026, 9, 30, 10, 0)
 
 HEBREW_DATES = [
     (ORDINARY_DAY, "eng", "4 Elul 5786"),
@@ -89,11 +89,21 @@ HOLIDAYS = [
     (LEAP_ADAR_I, "eng", "Purim", 36),
     (LEAP_ADAR_II, "eng", "Purim", 8),
     (LEAP_ADAR_II, "heb", "פורים", 8),
+    # 30 Kislev — Chanukah and Rosh Chodesh Tevet coincide. hdate 0.11 returned a
+    # list from holiday_type here, so the old scalar predicate skipped the day and
+    # reported "in 1 day" while it WAS the day. The 1.x holidays list fixes it.
+    (CHANUKAH_ROSH_CHODESH, "eng", "Chanukah", 0),
+    (CHANUKAH_ROSH_CHODESH, "heb", "חנוכה", 0),
+    # 30 Tishrei — Shmini Atzeret is the only date where two holidays-of-interest
+    # coincide, making it the only place the new `holidays[0]` indexing has to
+    # choose. No bug here, but nothing else pins the choice, so pin it explicitly.
+    (SHMINI_ATZERET, "eng", "Shmini Atzeret", 3),
+    (SHMINI_ATZERET, "heb", "שמיני עצרת", 3),
 ]
 
 
 @pytest.mark.parametrize("now_tz, lang, expected_name, expected_delta", HOLIDAYS)
 def test_upcoming_holiday_is_stable(now_tz, lang, expected_name, expected_delta):
     holiday, days_delta = get_upcoming_holiday(lang=lang, now_tz=now_tz)
-    assert holiday_name(holiday) == expected_name
+    assert holiday == expected_name
     assert days_delta == expected_delta
