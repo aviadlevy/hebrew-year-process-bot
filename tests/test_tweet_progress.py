@@ -12,7 +12,7 @@ async def test_toot(mocker):
     mastodon_client = MagicMock()
     mastodon_client.toot.return_value = "Toot successful"
 
-    with patch("tweet_progress.run_in_executor", return_value=toot):
+    with patch("hypb.tweet_progress.run_in_executor", return_value=toot):
         result = await toot(mastodon_client, "Test Toot")
         assert result == "Toot successful"
 
@@ -22,7 +22,7 @@ async def test_account_statuses(mocker):
     mastodon_client = MagicMock()
     mastodon_client.account_statuses.return_value = ["Toot 1", "Toot 2"]
 
-    with patch("tweet_progress.run_in_executor", return_value=account_statuses):
+    with patch("hypb.tweet_progress.run_in_executor", return_value=account_statuses):
         result = await account_statuses(mastodon_client)
         assert result == ["Toot 1", "Toot 2"]
 

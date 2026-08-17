@@ -1,7 +1,7 @@
 import traceback
 
-from config import get_mastodon_client, get_mastodon_stream_listener
-from utils import send_alert
+from hypb.config import get_mastodon_client, get_mastodon_stream_listener
+from hypb.utils import send_alert
 
 
 def reply():

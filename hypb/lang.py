@@ -1,5 +1,9 @@
 
-from dates_helper import get_current_date, get_current_parashah, get_upcoming_holiday
+from hypb.dates_helper import (
+    get_current_date,
+    get_current_parashah,
+    get_upcoming_holiday,
+)
 
 
 def get_eng_date():

@@ -44,9 +44,8 @@ def test_language_is_restored_to_the_previous_value():
 def test_language_is_restored_when_the_block_raises():
     token = context_language.set("he")
     try:
-        with pytest.raises(RuntimeError):
-            with language("eng"):
-                raise RuntimeError
+        with pytest.raises(RuntimeError), language("eng"):
+            raise RuntimeError
         assert context_language.get() == "he"
     finally:
         context_language.reset(token)
