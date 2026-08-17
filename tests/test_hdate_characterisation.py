@@ -94,9 +94,11 @@ HOLIDAYS = [
     # reported "in 1 day" while it WAS the day. The 1.x holidays list fixes it.
     (CHANUKAH_ROSH_CHODESH, "eng", "Chanukah", 0),
     (CHANUKAH_ROSH_CHODESH, "heb", "חנוכה", 0),
-    # 30 Tishrei — Shmini Atzeret is the only date where two holidays-of-interest
-    # coincide, making it the only place the new `holidays[0]` indexing has to
-    # choose. No bug here, but nothing else pins the choice, so pin it explicitly.
+    # 22 Tishrei — Shmini Atzeret and Simchat Torah coincide, the only date in
+    # the sweep where two holidays-of-interest fall together, making it the
+    # only place the new `holidays[0]` indexing has to choose (it picks Shmini
+    # Atzeret). No bug here, but nothing else pins the choice, so pin it
+    # explicitly.
     (SHMINI_ATZERET, "eng", "Shmini Atzeret", 3),
     (SHMINI_ATZERET, "heb", "שמיני עצרת", 3),
 ]
