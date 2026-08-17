@@ -20,12 +20,12 @@ def get_heb_parashah():
 
 def get_eng_yom_tov():
     upcoming_holiday, days_delta = get_upcoming_holiday(lang="eng")
-    return f"The upcoming holiday is {upcoming_holiday.holiday_description} and it'll arrive in {days_delta} days"
+    return f"The upcoming holiday is {upcoming_holiday} and it'll arrive in {days_delta} days"
 
 
 def get_heb_yom_tov():
     upcoming_holiday, days_delta = get_upcoming_holiday(lang="heb")
-    return f"החג הקרוב הוא {upcoming_holiday.holiday_description}. החג יגיע בעוד {days_delta} ימים"
+    return f"החג הקרוב הוא {upcoming_holiday}. החג יגיע בעוד {days_delta} ימים"
 
 
 MESSAGES = {
