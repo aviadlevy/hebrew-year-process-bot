@@ -16,18 +16,18 @@ def get_current_state(today=None):
     return int((days_count / total_days) * 100)
 
 
-def get_midnight(tz):
-    midnight = datetime.combine(date.today() + timedelta(days=1), time())
+def get_midnight(reference_date, tz):
+    midnight = datetime.combine(reference_date + timedelta(days=1), time())
     return timezone(tz).localize(midnight)
 
 
 def is_past_tzet_hakohavim_and_before_midnight(now, tz="UTC"):
     s = sun(JERUSALEM_CITY.observer, date=now)
-    return get_midnight(tz=tz) > now > s["sunset"]
+    return get_midnight(now.date(), tz=tz) > now > s["sunset"]
 
 
-def get_current_date(lang="eng") -> str:
-    return get_hdate_from_pydate(lang=lang).hebrew_date
+def get_current_date(lang="eng", now_tz=None) -> str:
+    return get_hdate_from_pydate(now_tz=now_tz, lang=lang).hebrew_date
 
 
 def get_hdate_from_pydate(now_tz=None, lang="eng") -> HDate:
@@ -40,12 +40,12 @@ def get_hdate_from_pydate(now_tz=None, lang="eng") -> HDate:
     return heb_date
 
 
-def get_current_parashah(lang="eng") -> str:
-    return get_hdate_from_pydate(lang=lang).parasha
+def get_current_parashah(lang="eng", now_tz=None) -> str:
+    return get_hdate_from_pydate(now_tz=now_tz, lang=lang).parasha
 
 
-def get_upcoming_holiday(lang="eng") -> tuple[HDate, int]:
-    iter_date = get_hdate_from_pydate(lang=lang)
+def get_upcoming_holiday(lang="eng", now_tz=None) -> tuple[HDate, int]:
+    iter_date = get_hdate_from_pydate(now_tz=now_tz, lang=lang)
     days_delta = 0
     while iter_date.holiday_type not in [HolidayTypes.YOM_TOV, HolidayTypes.MELACHA_PERMITTED_HOLIDAY]:
         iter_date = iter_date.next_day
