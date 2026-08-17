@@ -45,7 +45,7 @@ def get_midnight(reference_date, tz):
     return timezone(tz).localize(midnight)
 
 
-def is_past_tzet_hakohavim_and_before_midnight(now, tz="UTC"):
+def is_past_tzet_hakohavim_and_before_midnight(now, tz):
     s = sun(JERUSALEM_CITY.observer, date=now)
     return get_midnight(now.date(), tz=tz) > now > s["sunset"]
 
