@@ -1,9 +1,12 @@
 import random
+from unittest.mock import MagicMock
 
 from mastodon import Mastodon
 
 from hypb.dates_helper import get_current_date, get_current_parashah
 from hypb.lang import get_eng_yom_tov, get_heb_yom_tov
+from hypb.reply_on_mention_mastodon import main
+from hypb.settings import REQUIRED_REPLIER_VARS
 from hypb.stream_listener_mastodon import _StreamingListener
 
 
@@ -78,3 +81,18 @@ def test_upcoming_holiday_heb(mocker):
 def test_unsupported_command(mocker):
     spy, _ = base_flow(mocker, "What's up dude?")
     spy.assert_not_called()
+
+
+def test_main_returns_1_when_stream_closes_cleanly(monkeypatch, mocker):
+    """mastodon-py's stream_user() returns normally on a clean server-side close
+    (it only raises on ChunkedEncodingError/ReadTimeout/ConnectionError). That
+    must still surface as a runtime failure, not a successful exit."""
+    for var in REQUIRED_REPLIER_VARS:
+        monkeypatch.setenv(var, "test-value")
+
+    mastodon_client = MagicMock()
+    mastodon_client.stream_user.return_value = None
+    mocker.patch("hypb.reply_on_mention_mastodon.get_mastodon_client", return_value=mastodon_client)
+    mocker.patch("hypb.reply_on_mention_mastodon.get_mastodon_stream_listener", return_value=MagicMock())
+
+    assert main() == 1

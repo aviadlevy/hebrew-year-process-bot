@@ -14,6 +14,11 @@ def reply():
     stream = get_mastodon_stream_listener(mastodon_client=mastodon_client)
     logger.info("listening for mentions")
     mastodon_client.stream_user(stream)
+    # mastodon-py's handle_stream() returns normally when the server closes the
+    # SSE stream cleanly — it only raises on ChunkedEncodingError, ReadTimeout,
+    # or ConnectionError. For an always-on replier the stream ending is never
+    # success, so this is a warning, not silence.
+    logger.warning("mastodon stream closed")
 
 
 def main() -> int:
@@ -34,7 +39,7 @@ def main() -> int:
         logger.exception("replier stopped")
         send_alert("exception: " + repr(e) + "\n" + traceback.format_exc())
         return 1
-    return 0
+    return 1
 
 
 if __name__ == "__main__":
