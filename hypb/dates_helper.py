@@ -2,8 +2,7 @@ import contextlib
 from datetime import datetime, time, timedelta
 
 from astral.sun import sun
-from hdate import HDateInfo, HebrewDate, HolidayTypes, Months
-from hdate import converters as conv
+from hdate import HDateInfo, HebrewDate, HolidayTypes, Months, converters as conv
 from hdate.translator import context_language
 from pytz import timezone
 
