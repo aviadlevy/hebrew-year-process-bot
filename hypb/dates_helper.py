@@ -15,11 +15,13 @@ HOLIDAY_TYPES_OF_INTEREST = (HolidayTypes.YOM_TOV, HolidayTypes.MELACHA_PERMITTE
 def language(lang):
     """Scope hdate's output language to this block.
 
-    hdate 1.x selects language through a process-wide ContextVar rather than a
-    per-object flag, and it defaults to Hebrew. mastodon-py dispatches
-    on_notification on a background thread, so a global set_language() call
-    could let two concurrent mentions cross-contaminate each other's replies.
-    A ContextVar token is per-context, so this is safe under concurrency.
+    hdate 1.x selects language through a ContextVar rather than a per-object
+    flag, and it defaults to Hebrew. Without resetting it afterwards, a
+    Hebrew render would leak into any later hdate call in the same context
+    that isn't itself wrapped in language() — including a subsequent English
+    render. Taking a token and resetting it in a finally block confines the
+    language change to this block, regardless of what runs before or after,
+    or whether the block raises.
     """
     token = context_language.set(HDATE_LANGUAGES[lang])
     try:
@@ -68,10 +70,9 @@ def get_current_parashah(lang="eng", now_tz=None) -> str:
 def get_upcoming_holiday(lang="eng", now_tz=None) -> tuple[str, int]:
     with language(lang):
         iter_date = get_hdate_from_pydate(now_tz=now_tz)
-        days_delta = 0
-        while True:
+        for days_delta in range(400):
             holidays = [h for h in iter_date.holidays if h.type in HOLIDAY_TYPES_OF_INTEREST]
             if holidays:
                 return str(holidays[0]), days_delta
             iter_date = iter_date.next_day
-            days_delta += 1
+        raise LookupError("no yom tov or melacha-permitted holiday found within 400 days")
