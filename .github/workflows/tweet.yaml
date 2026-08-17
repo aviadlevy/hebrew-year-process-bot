@@ -14,7 +14,7 @@ jobs:
         with:
           enable-cache: true
       - name: Install dependencies
-        run: uv sync --locked
+        run: uv sync --locked --no-dev
 
       - name: Tweet
         env:
@@ -28,7 +28,7 @@ jobs:
           MASTODON_ACCESS_TOKEN: ${{secrets.MASTODON_ACCESS_TOKEN}}
           MASTODON_BASE_URL: ${{secrets.MASTODON_BASE_URL}}
           MASTODON_USER_ID: ${{secrets.MASTODON_USER_ID}}
-        run: uv run python hypb/tweet_progress.py
+        run: uv run --no-dev python hypb/tweet_progress.py
 
       - name: Alert on failure
         if: failure()

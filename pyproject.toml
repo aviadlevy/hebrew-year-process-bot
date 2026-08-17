@@ -13,6 +13,10 @@ dependencies = [
     "async-lru>=2.0.4,<3",
     "hdate>=1.2.1,<2",
     "mastodon-py>=1.8.1,<1.9",
+    # Deliberately uncapped: pytz ships the IANA timezone database, and this bot
+    # depends on current Asia/Jerusalem DST rules to compute the tzet hakochavim
+    # boundary that decides which Hebrew date it reports. An upper bound here
+    # would freeze tzdata and silently produce wrong dates.
     "pytz>=2024.1",
     "requests>=2.32.0,<3",
     "tweepy>=4.14.0,<5",
@@ -123,4 +127,4 @@ split-on-trailing-comma = false
 testpaths = ["tests"]
 
 [tool.coverage.run]
-omit = ["tests/*"]
+omit = ["tests/*", "venv/*"]
