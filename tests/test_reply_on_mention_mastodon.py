@@ -94,5 +94,7 @@ def test_main_returns_1_when_stream_closes_cleanly(monkeypatch, mocker):
     mastodon_client.stream_user.return_value = None
     mocker.patch("hypb.reply_on_mention_mastodon.get_mastodon_client", return_value=mastodon_client)
     mocker.patch("hypb.reply_on_mention_mastodon.get_mastodon_stream_listener", return_value=MagicMock())
+    send_alert = mocker.patch("hypb.reply_on_mention_mastodon.send_alert")
 
     assert main() == 1
+    assert not send_alert.called
