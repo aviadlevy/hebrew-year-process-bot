@@ -113,3 +113,8 @@ out
 gen
 static/
 templates/
+
+docs/
+deploy/
+.github/
+tests/

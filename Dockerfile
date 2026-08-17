@@ -1,36 +1,38 @@
-FROM python:3.11-slim-buster AS python-base
+FROM ghcr.io/astral-sh/uv:0.9-python3.14-trixie-slim AS builder
 
-# https://python-poetry.org/docs#ci-recommendations
-ENV POETRY_VERSION=1.8.3
-ENV POETRY_HOME=/opt/poetry
-ENV POETRY_VENV=/opt/poetry-venv
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    UV_PYTHON_DOWNLOADS=never
 
-# Tell Poetry where to place its cache and virtual environment
-ENV POETRY_CACHE_DIR=/opt/.cache
+WORKDIR /app
 
-# Create stage for Poetry installation
-FROM python-base AS poetry-base
+# Dependencies first, so this layer caches independently of source changes.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    uv sync --locked --no-dev --no-install-project --no-editable
 
-# Creating a virtual environment just for poetry and install it with pip
-RUN python3 -m venv "$POETRY_VENV" \
-	&& "$POETRY_VENV"/bin/pip install -U pip setuptools \
-	&& "$POETRY_VENV"/bin/pip install poetry==${POETRY_VERSION}
-
-FROM python-base
-
-COPY --from=poetry-base ${POETRY_VENV} ${POETRY_VENV}
-
-ENV PATH="${PATH}:${POETRY_VENV}/bin"
-
-WORKDIR /hypb
-
-ENV PYTHONPATH "${PYTHONPATH}:/hypb"
-
-COPY poetry.lock pyproject.toml ./
 COPY README.md ./
+COPY pyproject.toml uv.lock ./
+COPY hypb ./hypb
 
-RUN poetry check
-RUN poetry config virtualenvs.in-project true
-RUN poetry install --no-ansi --without dev
+# --no-editable installs the package into site-packages, so the venv is
+# self-contained and the runtime stage needs no source tree.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --locked --no-dev --no-editable
 
-COPY hypb .
+
+FROM python:3.14-slim-trixie
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PATH="/app/.venv/bin:$PATH"
+
+RUN useradd --create-home --uid 10001 hypb
+
+COPY --from=builder --chown=hypb:hypb /app/.venv /app/.venv
+
+USER hypb
+WORKDIR /home/hypb
+
+ENTRYPOINT ["hypb-mastodon-replier"]
