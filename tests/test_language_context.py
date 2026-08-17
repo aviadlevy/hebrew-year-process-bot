@@ -5,8 +5,7 @@
 2. Language is a ContextVar, not a per-object flag. Without resetting it,
    a Hebrew render leaks into any later hdate call in the same context that
    isn't itself wrapped in language() -- including a subsequent English
-   render, or a concurrent render on another thread while both are live at
-   the same time.
+   render, or a render reached after an earlier call raised partway through.
 """
 
 import threading
@@ -43,11 +42,14 @@ def test_language_is_restored_to_the_previous_value():
 
 
 def test_language_is_restored_when_the_block_raises():
-    before = context_language.get()
-    with pytest.raises(RuntimeError):
-        with language("heb"):
-            raise RuntimeError
-    assert context_language.get() == before
+    token = context_language.set("he")
+    try:
+        with pytest.raises(RuntimeError):
+            with language("eng"):
+                raise RuntimeError
+        assert context_language.get() == "he"
+    finally:
+        context_language.reset(token)
 
 
 def test_concurrent_languages_are_live_at_the_same_time():
