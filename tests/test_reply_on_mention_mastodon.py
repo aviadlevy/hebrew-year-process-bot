@@ -83,6 +83,22 @@ def test_unsupported_command(mocker):
     spy.assert_not_called()
 
 
+def test_main_returns_2_on_missing_config(monkeypatch, mocker):
+    """main() must fail fast on missing config, before ever attempting an alert.
+
+    hypb/utils.py reads TELEGRAM_TOKEN at import time and bakes it into a URL,
+    so a missing token makes every alert 404 silently. Validation must return
+    before reply() or send_alert() are ever reached.
+    """
+    for var in REQUIRED_REPLIER_VARS:
+        monkeypatch.delenv(var, raising=False)
+
+    send_alert = mocker.patch("hypb.reply_on_mention_mastodon.send_alert")
+
+    assert main() == 2
+    assert not send_alert.called
+
+
 def test_main_returns_1_when_stream_closes_cleanly(monkeypatch, mocker):
     """mastodon-py's stream_user() returns normally on a clean server-side close
     (it only raises on ChunkedEncodingError/ReadTimeout/ConnectionError). That
@@ -98,6 +114,22 @@ def test_main_returns_1_when_stream_closes_cleanly(monkeypatch, mocker):
 
     assert main() == 1
     assert not send_alert.called
+
+
+def test_main_returns_1_and_alerts_when_reply_raises(monkeypatch, mocker):
+    """When reply() blows up, main() must log it, alert, and return 1.
+
+    This is the mirror image of test_main_returns_1_when_stream_closes_cleanly:
+    both return 1, but only a genuine runtime failure should page anyone.
+    """
+    for var in REQUIRED_REPLIER_VARS:
+        monkeypatch.setenv(var, "test-value")
+
+    mocker.patch("hypb.reply_on_mention_mastodon.reply", side_effect=RuntimeError("boom"))
+    send_alert = mocker.patch("hypb.reply_on_mention_mastodon.send_alert")
+
+    assert main() == 1
+    assert send_alert.called
 
 
 class FakeStreamResponse:
