@@ -360,7 +360,25 @@ sudo systemctl start hypb-progress.service
 sudo journalctl -u hypb-progress.service -n 50 --no-pager
 ```
 
-Then enable it:
+**Retire the GitHub Actions schedule before enabling the timer.** Nothing
+else does this for you, and the timer's `OnCalendar` fires at the same
+instant as the existing cron (§9.4) — leave both live and the percentage gets
+posted twice a day, from two different runners, until someone notices.
+Comment out the `schedule:` block in `.github/workflows/tweet.yaml`, keep
+`workflow_dispatch:`, and commit:
+
+```yaml
+on:
+  # schedule:
+  #   - cron:  '0 7 * * *'
+  workflow_dispatch:
+```
+
+Keep `workflow_dispatch:` — do not delete the workflow. It is the manual
+fallback for posting if the host is down, so it has to stay callable even
+while the schedule is off.
+
+Then enable the timer:
 
 ```bash
 sudo systemctl enable --now hypb-progress.timer
@@ -409,13 +427,14 @@ sudo docker run --rm -v hypb-state:/var/lib/hypb --user 10001:10001 \
 
 ### 9.6 Rollback
 
-The GitHub Actions workflow is kept, with its `cron:` commented out and
-`workflow_dispatch:` intact. To go back:
+To go back to GitHub Actions, disable the timer, then re-enable the
+`schedule:` block:
 
 ```bash
 sudo systemctl disable --now hypb-progress.timer
 ```
 
-then uncomment `cron:` in `.github/workflows/tweet.yaml`. Running both at once
-is survivable but pointless: whichever fires first posts and records, and the
-second sees the current percentage already stored and posts nothing.
+then uncomment `cron:` in `.github/workflows/tweet.yaml` (§9.3) and commit.
+Running both at once — during the switch, or if you forget to disable one
+side — is survivable but pointless: whichever fires first posts and records,
+and the second sees the current percentage already stored and posts nothing.
