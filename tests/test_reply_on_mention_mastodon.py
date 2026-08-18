@@ -1,13 +1,14 @@
 import random
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from mastodon import Mastodon
 
 from hypb.dates_helper import get_current_date, get_current_parashah
 from hypb.lang import get_eng_yom_tov, get_heb_yom_tov
-from hypb.reply_on_mention_mastodon import main
+from hypb.reply_on_mention_mastodon import main, reply
 from hypb.settings import REQUIRED_REPLIER_VARS
 from hypb.stream_listener_mastodon import _StreamingListener
+from hypb.utils import send_alert
 
 
 class dotdict(dict):
@@ -99,28 +100,39 @@ def test_main_returns_2_on_missing_config(monkeypatch, mocker):
     assert not send_alert.called
 
 
-def test_main_returns_1_when_stream_closes_cleanly(monkeypatch, mocker):
-    """mastodon-py's stream_user() returns normally on a clean server-side close
-    (it only raises on ChunkedEncodingError/ReadTimeout/ConnectionError). That
-    must still surface as a runtime failure, not a successful exit."""
-    for var in REQUIRED_REPLIER_VARS:
-        monkeypatch.setenv(var, "test-value")
+def test_reply_supervises_the_stream_instead_of_exiting_when_it_drops():
+    """A dropped or cleanly-closed stream must reconnect, not end the process.
 
+    mastodon.social recycles long-lived SSE connections; the blocking
+    stream_user() cannot recover from that by itself, so it used to exit 1 and
+    fire a Telegram alert on an entirely expected event. reply() now hands the
+    stream to StreamSupervisor, which reconnects in place — see
+    tests/test_stream_supervisor.py for the retry and alerting behaviour.
+    """
     mastodon_client = MagicMock()
-    mastodon_client.stream_user.return_value = None
-    mocker.patch("hypb.reply_on_mention_mastodon.get_mastodon_client", return_value=mastodon_client)
-    mocker.patch("hypb.reply_on_mention_mastodon.get_mastodon_stream_listener", return_value=MagicMock())
-    send_alert = mocker.patch("hypb.reply_on_mention_mastodon.send_alert")
+    listener = MagicMock()
+    with (
+        patch("hypb.reply_on_mention_mastodon.get_mastodon_client", return_value=mastodon_client),
+        patch("hypb.reply_on_mention_mastodon.get_mastodon_stream_listener", return_value=listener),
+        patch("hypb.reply_on_mention_mastodon.StreamSupervisor") as supervisor_cls,
+    ):
+        reply()
 
-    assert main() == 1
-    assert not send_alert.called
+    supervisor_cls.return_value.run.assert_called_once_with()
+    kwargs = supervisor_cls.call_args.kwargs
+    assert kwargs["alert"] is send_alert, "the supervisor must page through the same alerting path as main()"
+
+    kwargs["run_stream"]()
+    mastodon_client.stream_user.assert_called_once_with(listener)
 
 
 def test_main_returns_1_and_alerts_when_reply_raises(monkeypatch, mocker):
     """When reply() blows up, main() must log it, alert, and return 1.
 
-    This is the mirror image of test_main_returns_1_when_stream_closes_cleanly:
-    both return 1, but only a genuine runtime failure should page anyone.
+    reply() only returns by raising now that the supervisor loops forever, so
+    anything reaching main()'s handler is a failure the supervisor deliberately
+    would not retry — a malformed event, a bad token, a bug — and every one of
+    those does deserve a page.
     """
     for var in REQUIRED_REPLIER_VARS:
         monkeypatch.setenv(var, "test-value")

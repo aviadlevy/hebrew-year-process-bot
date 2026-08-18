@@ -4,6 +4,7 @@ import traceback
 
 from hypb.config import get_mastodon_client, get_mastodon_stream_listener
 from hypb.settings import REQUIRED_REPLIER_VARS, ConfigurationError, require
+from hypb.stream_supervisor import StreamSupervisor
 from hypb.utils import send_alert
 
 logger = logging.getLogger(__name__)
@@ -13,12 +14,11 @@ def reply():
     mastodon_client = get_mastodon_client()
     stream = get_mastodon_stream_listener(mastodon_client=mastodon_client)
     logger.info("listening for mentions")
-    mastodon_client.stream_user(stream)
-    # mastodon-py's handle_stream() returns normally when the server closes the
-    # SSE stream cleanly — it only raises on ChunkedEncodingError, ReadTimeout,
-    # or ConnectionError. For an always-on replier the stream ending is never
-    # success, so this is a warning, not silence.
-    logger.warning("mastodon stream closed")
+    # Neither a dropped nor a cleanly-closed stream is worth ending the process
+    # over: mastodon.social recycles long-lived connections routinely, and a
+    # container restart per recycle loses every mention that arrives while it is
+    # down. The supervisor reconnects in place and pages only if it cannot.
+    StreamSupervisor(run_stream=lambda: mastodon_client.stream_user(stream), alert=send_alert).run()
 
 
 def main() -> int:
@@ -34,6 +34,8 @@ def main() -> int:
         return 2
 
     try:
+        # reply() only returns by raising: the supervisor loops forever, so
+        # anything reaching here is a failure it deliberately would not retry.
         reply()
     except Exception as e:
         logger.exception("replier stopped")

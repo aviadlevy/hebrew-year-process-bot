@@ -182,23 +182,39 @@ sudo docker compose ps          # status and restart count
 ```
 
 A climbing restart count is the signal that the replier is crash-looping.
-Exit codes distinguish the failure modes:
+It is a trustworthy signal: a dropped stream no longer restarts the container.
+
+**Dropped connections are expected and are handled in-process.**
+mastodon.social recycles long-lived SSE connections — in practice a few times
+a day — and the blocking `stream_user()` cannot recover from that on its own,
+because mastodon-py's reconnect loop only exists on its `run_async=True` path.
+`hypb/stream_supervisor.py` reconnects instead, so a recycle costs a second of
+downtime rather than a container restart, and it does not page anyone. In the
+log it looks like this, at WARNING, and nothing else happens:
+
+```
+mastodon stream ended (MastodonNetworkError('Server ceased communication.')); reconnecting in 1s
+```
+
+Reconnects back off 1s → 2s → 4s … capped at 60s. A stream that stayed up for
+60s counts as healthy and resets the backoff, so a routine recycle is always
+followed by an immediate retry rather than an inherited delay.
+
+Exit codes and alerts distinguish what is left:
 
 - **Exit 2** — missing or invalid configuration. The log names every variable
   that is unset. Check the env file.
-- **Exit 1, with a logged exception and a Telegram alert** — a runtime failure
-  in the streaming connection (`ChunkedEncodingError`, `ReadTimeout`,
-  `ConnectionError`, or anything else mastodon-py raised). The alert carries
-  the exception and is sent before the process exits.
-- **Exit 1, with only a `mastodon stream closed` warning and no Telegram
-  alert** — the server closed the stream cleanly. mastodon-py's
-  `handle_stream()` returns normally here rather than raising, so there is no
-  exception to alert on. The replier still treats it as failure and exits
-  non-zero so the restart is attributable, but the only traces are that log
-  line and the restart count. **A climbing restart count with no
-  corresponding Telegram alerts is the sign this is happening** — the stream
-  is being closed from the far end rather than the process crashing, and it
-  is worth investigating even though the container looks "up" in between.
+- **Exit 1, with a logged exception and a Telegram alert** — a failure the
+  supervisor deliberately will not retry: anything that is not a transport
+  error. A `MastodonMalformedEventError` (a parsing bug, as in the keepalive
+  bug), a rejected token, or a plain bug all land here. These *should* page,
+  and they crash-loop until fixed.
+- **A Telegram alert reading `mastodon stream down for Nm, still retrying`,
+  with no restart** — reconnects have been failing continuously for five
+  minutes. The process is alive and still trying; this is the far end or the
+  network being down, not the bot. Exactly one alert is sent per outage, and
+  recovery is logged at INFO (`mastodon stream recovered after Ns of failed
+  reconnects`) rather than alerted.
 
 ## 8. Known limitations
 
@@ -208,10 +224,17 @@ that stays open and looks healthy while silently delivering no mentions. A
 liveness probe cannot observe that at all, so adding one would manufacture
 confidence rather than reduce risk.
 
-The consequence, stated plainly: **Telegram alerts fire on crashes, not on a
-silently-stalled stream.** If the bot goes quiet without crashing, nothing in
-this stack will tell you. Periodically checking the logs for a recent mention
-being received and answered is currently the only way to notice.
+The consequence, stated plainly: **Telegram alerts fire on crashes and on
+sustained reconnect failures, not on a silently-stalled stream.** If the bot
+goes quiet while its connection still looks open, nothing in this stack will
+tell you. Periodically checking the logs for a recent mention being received
+and answered is currently the only way to notice.
+
+**Mentions that arrive mid-reconnect are lost.** The streaming API has no
+replay and nothing backfills notifications after a reconnect, so anything
+posted during the gap is never seen. Reconnecting in-process shrinks that gap
+from a container restart to roughly a second for the common case, but does not
+close it.
 
 **`read_only: true` is verified only through startup.** Python
 initialization, the `python-magic` import, loading certifi's CA bundle, and
