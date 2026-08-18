@@ -79,6 +79,26 @@ async def test_an_empty_store_seeds_from_the_timeline_and_posts(store, clients):
 
 
 @pytest.mark.asyncio
+async def test_a_seed_fetch_failure_aborts_without_writing_any_state(store, clients):
+    """A transient Mastodon outage during seeding must not be mistaken for an empty window.
+
+    An empty window is D3's conservative case: record without posting, exit 0.
+    A fetch failure is different -- we never actually learned whether a
+    progress toot exists -- so the run must abort with no row written at all,
+    leaving the next run free to retry the seed cleanly.
+    """
+    mastodon_client, twitter_client = clients
+    mastodon_client.account_statuses.side_effect = RuntimeError("mastodon is down")
+
+    assert await tweet() == 1
+
+    assert not twitter_client.create_tweet.called
+    assert not mastodon_client.toot.called
+    assert store.get(MASTODON) is None
+    assert store.get(TWITTER) is None
+
+
+@pytest.mark.asyncio
 async def test_nothing_is_posted_when_there_is_no_history_to_seed_from(store, clients):
     """The TypeError case, end to end.
 
@@ -165,3 +185,21 @@ def test_main_returns_2_on_missing_config(monkeypatch):
         monkeypatch.delenv(var, raising=False)
 
     assert main() == 2
+
+
+def test_main_returns_1_and_alerts_when_tweet_raises(monkeypatch, mocker):
+    """A crash before the summary must still page, not just leave a traceback in journald.
+
+    StateStore() failing to open its database file, or any other exception
+    raised before tweet() reaches its own alert, used to escape asyncio.run as
+    a bare traceback with nothing sent to Telegram -- the job's only
+    observability. main() must catch it, log it, alert, and return 1.
+    """
+    for var in REQUIRED_PROGRESS_VARS:
+        monkeypatch.setenv(var, "test-value")
+
+    mocker.patch("hypb.tweet_progress.tweet", side_effect=RuntimeError("unable to open database file"))
+    send_async_alert = mocker.patch("hypb.tweet_progress.send_async_alert", new=mocker.AsyncMock())
+
+    assert main() == 1
+    assert send_async_alert.called

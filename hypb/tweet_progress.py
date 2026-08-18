@@ -55,16 +55,16 @@ async def _seed_from_timeline(mastodon_client):
 
     Consulted only for a platform with no stored row: it is how a first run --
     or one after the volume was lost -- avoids re-posting a percentage that
-    already went out. Returns None when the window holds no progress toot, in
-    which case the caller records without posting.
+    already went out. Returns None when the window genuinely holds no progress
+    toot, in which case the caller records without posting -- that is D3's
+    intended, conservative outcome.
+
+    A fetch failure is a different situation and is *not* caught here: it
+    propagates so the caller can tell "no progress toot in the window" apart
+    from "we could not check", and abort without writing state on the latter.
     """
-    try:
-        timeline = await account_statuses(mastodon_client, limit=SEED_TIMELINE_LIMIT)
-        return get_last_state(timeline)
-    except Exception as e:
-        logger.exception("could not seed from the mastodon timeline")
-        await send_async_alert("could not seed from the mastodon timeline: " + repr(e) + "\n" + traceback.format_exc())
-        return None
+    timeline = await account_statuses(mastodon_client, limit=SEED_TIMELINE_LIMIT)
+    return get_last_state(timeline)
 
 
 async def _publish(platform, poster, progress_bar):
@@ -93,13 +93,28 @@ async def tweet():
         TWITTER: lambda text: twitter_client.create_tweet(text=text),
     }
 
-    # One timeline read at most, and only when some platform has no row.
+    # One timeline read at most, and only when some platform has no row. A
+    # fetch failure here is not the same as an empty window: it means we do
+    # not actually know the seed, so the run aborts without writing any row
+    # rather than recording a percentage that may already be stale or, worse,
+    # was never posted at all.
     seed = None
     if any(store.get(platform) is None for platform in PLATFORMS):
-        seed = await _seed_from_timeline(mastodon_client)
+        try:
+            seed = await _seed_from_timeline(mastodon_client)
+        except Exception as e:
+            logger.exception("could not seed from the mastodon timeline; aborting without writing state")
+            await send_async_alert("could not seed from the mastodon timeline: " + repr(e) + "\n" + traceback.format_exc())
+            return 1
 
     outcomes = {}
     for platform in PLATFORMS:
+        # store.get/store.set are blocking SQLite calls made directly here,
+        # unlike the run_in_executor wrapper used for the Mastodon calls above.
+        # That is fine: this is a one-shot process with no other tasks running
+        # concurrently, the database is on local disk, and each call is
+        # sub-millisecond -- there is nothing for blocking the event loop to
+        # starve.
         last_state = store.get(platform)
         if last_state is None:
             last_state = seed
@@ -135,7 +150,19 @@ def main() -> int:
     except ConfigurationError as e:
         logger.error("%s", e)
         return 2
-    return asyncio.run(tweet())
+
+    try:
+        # Telegram is this job's only observability -- a crash that reaches
+        # here (StateStore() unable to open its file, a disk full mid-write)
+        # must still page, not escape asyncio.run as a bare traceback that
+        # only journald ever sees.
+        return asyncio.run(tweet())
+    except Exception as e:
+        logger.exception("tweet_progress failed")
+        # The loop asyncio.run() used has already closed, so a fresh one is
+        # spun up just to send the alert.
+        asyncio.run(send_async_alert("tweet_progress failed: " + repr(e) + "\n" + traceback.format_exc()))
+        return 1
 
 
 if __name__ == "__main__":
