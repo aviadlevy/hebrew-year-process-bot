@@ -6,4 +6,5 @@ After=docker.service
 
 [Service]
 Type=oneshot
+TimeoutStartSec=600
 ExecStart=/opt/hypb/progress-run.sh

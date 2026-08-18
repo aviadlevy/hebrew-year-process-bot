@@ -36,8 +36,6 @@ def test_get_progress_bar():
     assert progress_bar == expected_progress_bar
 
 
-# You can write more comprehensive tests for the 'should_tweet' and 'get_last_state' functions if necessary
-
 FORTY_NINE_PERCENT_TOOT = {"content": "<p>▓▓▓▓▓▓▓░░░░░░░░ 49%</p>"}
 
 
@@ -148,6 +146,25 @@ async def test_a_twitter_failure_still_toots_and_is_reported(store, clients):
     mastodon_client.toot.assert_called_with(FIFTY_PRECENT_BAR)
     assert store.get(MASTODON) == 50
     assert store.get(TWITTER) == 49, "a failed post must not advance its platform"
+
+
+@pytest.mark.asyncio
+async def test_a_mastodon_failure_still_tweets_and_is_reported(store, clients):
+    """The symmetric case: a Mastodon-side failure must not block Twitter either.
+
+    D1 is per-platform in both directions, not just the one this branch was
+    written to fix.
+    """
+    mastodon_client, twitter_client = clients
+    mastodon_client.toot.side_effect = RuntimeError("mastodon.social is down")
+    store.set(MASTODON, 49)
+    store.set(TWITTER, 49)
+
+    assert await tweet() == 1
+
+    twitter_client.create_tweet.assert_called_with(text=FIFTY_PRECENT_BAR)
+    assert store.get(TWITTER) == 50
+    assert store.get(MASTODON) == 49, "a failed post must not advance its platform"
 
 
 @pytest.mark.asyncio

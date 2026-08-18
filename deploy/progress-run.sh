@@ -7,7 +7,11 @@ COMPOSE_DIR="${COMPOSE_DIR:-/opt/hypb}"
 
 # IMAGE_TAG comes from the same file the replier uses, so both halves of the
 # bot always run one pinned release and there is one place to roll back.
-IMAGE_TAG="$(sed -n 's/^IMAGE_TAG=//p' "$COMPOSE_DIR/.env")"
+# `docker compose` strips surrounding quotes and trailing " #" comments from
+# .env values, so the extraction here does the same -- otherwise a quoted or
+# commented value works for the replier and fails only for this script.
+IMAGE_TAG_RAW="$(sed -n 's/^IMAGE_TAG=//p' "$COMPOSE_DIR/.env")"
+IMAGE_TAG="$(printf '%s' "$IMAGE_TAG_RAW" | sed -E 's/[[:space:]]+#.*$//; s/^"(.*)"$/\1/; s/^'"'"'(.*)'"'"'$/\1/')"
 if [[ -z "$IMAGE_TAG" ]]; then
     echo "error: IMAGE_TAG not set in $COMPOSE_DIR/.env" >&2
     exit 1

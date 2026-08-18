@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS post_state (
 class StateStore:
     """The last percentage successfully published, per platform."""
 
-    def __init__(self, db_path=None):
+    def __init__(self, db_path: str | os.PathLike[str] | None = None):
         self._db_path = Path(db_path or os.getenv("STATE_DB_PATH") or DEFAULT_DB_PATH)
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
         with self._connect() as conn:
