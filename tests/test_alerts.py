@@ -94,3 +94,37 @@ async def test_the_bot_token_never_reaches_the_log(mocker, caplog, monkeypatch):
 
     assert "secret-token" not in caplog.text
     assert "***" in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_a_bare_timeout_is_reported_without_raising(mocker, caplog):
+    """asyncio.TimeoutError is the builtin TimeoutError on Python 3.11+, and it is
+    NOT an aiohttp.ClientError subclass -- it needs its own entry in the except
+    tuple. If that tuple is ever "simplified" to aiohttp.ClientError alone, a real
+    timeout would propagate and crash the caller instead of being reported here.
+    """
+    error = TimeoutError("timed out")
+    mocker.patch("hypb.utils.aiohttp.ClientSession", return_value=_FakeSession(error=error))
+
+    with caplog.at_level(logging.ERROR):
+        assert await send_async_alert("hello") is False
+
+    assert "could not be sent" in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_a_rejected_alert_also_redacts_the_token(mocker, caplog, monkeypatch):
+    """redact() is applied on both the exception path and the rejection path.
+
+    Only the exception path had a redaction test; a regression that dropped
+    redact() from the rejection branch would go unnoticed otherwise.
+    """
+    monkeypatch.setattr("hypb.utils.TELEGRAM_TOKEN", "123456:secret-token")
+    response = _FakeResponse(ok=False, status=400, text="chat not found for bot123456:secret-token")
+    mocker.patch("hypb.utils.aiohttp.ClientSession", return_value=_FakeSession(response=response))
+
+    with caplog.at_level(logging.ERROR):
+        assert await send_async_alert("hello") is False
+
+    assert "secret-token" not in caplog.text
+    assert "***" in caplog.text
