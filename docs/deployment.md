@@ -148,6 +148,26 @@ status and recent logs. It reads `/opt/hypb` by default (override with
 equivalent to the `docker compose` commands below — a convenience wrapper,
 not a dependency.
 
+**Confirm the deploy on Telegram.** Every start sends a notice naming the
+deploy it came from:
+
+```
+hypb mastodon replier started
+version: v4.0.0
+instance: https://mastodon.social
+host: 8f3c1d9e4b7a
+started: 2026-08-18 20:48:11 IDT
+```
+
+If that message does not arrive, alerting is broken and every later section of
+this document that says "you will be paged" is false. The log says which half
+failed: `telegram rejected the alert: HTTP 400 ...` means the credentials
+reached Telegram and were refused — a wrong `TELEGRAM_CHAT_ID` reads
+`chat not found`, a wrong `TELEGRAM_TOKEN` reads `Unauthorized` — while
+`telegram alert could not be sent` means the request never got there. The bot
+token is redacted from both. A failed notice is logged, not fatal: answering
+mentions matters more than being able to page anyone.
+
 ## 5. Routine deploy
 
 ```bash
@@ -180,6 +200,9 @@ cd /opt/hypb
 sudo docker compose logs -f     # tail logs
 sudo docker compose ps          # status and restart count
 ```
+
+The startup notice described in §4 arrives on every start, not only the first,
+so an unexpected one in Telegram means the container restarted.
 
 A climbing restart count is the signal that the replier is crash-looping.
 It is a trustworthy signal: a dropped stream no longer restarts the container.

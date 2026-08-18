@@ -4,6 +4,7 @@ import traceback
 
 from hypb.config import get_mastodon_client, get_mastodon_stream_listener
 from hypb.settings import REQUIRED_REPLIER_VARS, ConfigurationError, require
+from hypb.startup import build_startup_message
 from hypb.stream_supervisor import StreamSupervisor
 from hypb.utils import send_alert
 
@@ -32,6 +33,12 @@ def main() -> int:
     except ConfigurationError as e:
         logger.error("%s", e)
         return 2
+
+    # Sent before streaming starts, so a broken alerting path shows up on the
+    # deploy rather than during the first incident. It is not fatal: the replier
+    # answering mentions matters more than it being able to page anyone.
+    if not send_alert(build_startup_message()):
+        logger.error("telegram alerting is not working; the replier will run but nothing will page you")
 
     try:
         # reply() only returns by raising: the supervisor loops forever, so
