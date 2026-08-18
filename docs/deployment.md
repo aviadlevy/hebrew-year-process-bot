@@ -5,8 +5,8 @@ document is the operating contract for that container: what it needs, how to
 deploy and roll back, how to read its failure modes, and what it does not
 guarantee.
 
-It assumes a Linux host you can reach over SSH, with a `docker` group your
-user belongs to. Nothing here is specific to a particular machine.
+It assumes a Linux host you can reach over SSH, with an account that can
+`sudo`. Nothing here is specific to a particular machine.
 
 ## 1. Host prerequisites
 
@@ -27,12 +27,13 @@ sudo apt-get update
 sudo apt-get install -y docker-ce docker-ce-cli containerd.io \
     docker-buildx-plugin docker-compose-plugin
 
-sudo usermod -aG docker "$USER"
 sudo systemctl enable --now docker
 ```
 
-The group change does not affect your current shell — reconnect before
-running `docker` without `sudo`.
+Every `docker` command here runs under `sudo`, and your login account is
+deliberately **not** added to the `docker` group. Membership in that group is
+root-equivalent — the daemon socket will bind any host path into a container as
+root — so adding your user would silently undo the file permissions in §2.
 
 `systemctl enable` matters: it is what brings the container back after a host
 reboot, together with the compose file's `restart: unless-stopped`.
@@ -53,8 +54,12 @@ Four secrets plus the image tag:
 | `TELEGRAM_CHAT_ID` | Send the bot any message, then call `https://api.telegram.org/bot<TELEGRAM_TOKEN>/getUpdates` and read `message.chat.id`. |
 | `IMAGE_TAG` | Which published image to run — see [§3](#3-pick-an-image-tag). Not a secret, but required. |
 
-The env file must be owned `root:root`, mode `0600` — readable only by root,
-which is who Docker runs as.
+The env file must be owned `root:root`, mode `0600`. `0600` is the part that
+matters: the tokens stay unreadable to every other account on the host, and to
+anything running as your login user — a backup job, a stray `scp -r`. Root
+ownership is what keeps that true, given that no unprivileged account is in the
+`docker` group (§1). Set the ownership **after** filling in the values;
+afterwards every edit needs `sudo`.
 
 All four secrets are **hard requirements**. The process validates them at
 startup and exits 2 naming every one that is missing, rather than failing
