@@ -98,3 +98,53 @@ def test_main_returns_1_when_stream_closes_cleanly(monkeypatch, mocker):
 
     assert main() == 1
     assert not send_alert.called
+
+
+class FakeStreamResponse:
+    """Replays a raw byte stream the way requests' iter_content does."""
+
+    def __init__(self, payload: bytes):
+        self.payload = payload
+
+    def iter_content(self, chunk_size=1):
+        for byte in self.payload:
+            yield bytes([byte])
+
+
+# mastodon.social sends a keepalive roughly every 15 seconds: a comment line
+# starting with ':', then the blank line that terminates the SSE block.
+HEARTBEAT = b":thump\n\n"
+
+
+def test_heartbeat_does_not_abort_the_stream():
+    """A keepalive must not kill the replier.
+
+    mastodon-py 1.8.1's _parse_line() calls handle_heartbeat() for a ':' comment
+    and returns the event dict untouched — still empty. The blank line that
+    follows then reaches _dispatch({}), which reads event['event'] and raises
+    MastodonMalformedEventError. Upstream fixed this in 2.x by guarding
+    _dispatch with `if not event: return`; we backport that guard.
+
+    Without the guard this crashes the process roughly every 15 seconds, so the
+    always-on replier can never stay up.
+    """
+    listener = _StreamingListener(mastodon_client=MagicMock())
+
+    listener.handle_stream(FakeStreamResponse(HEARTBEAT))
+
+
+def test_real_event_still_dispatches_after_a_heartbeat():
+    """The guard must skip only empty events, never real ones.
+
+    A guard that swallowed everything would make this test the only thing
+    standing between a silent bot and nobody noticing.
+    """
+    listener = _StreamingListener(mastodon_client=MagicMock())
+    received = []
+    listener.on_update = received.append
+
+    payload = HEARTBEAT + b'event: update\ndata: {"content": "hello"}\n\n'
+    listener.handle_stream(FakeStreamResponse(payload))
+
+    assert len(received) == 1, "the real update event was not dispatched"
+    assert received[0]["content"] == "hello"
