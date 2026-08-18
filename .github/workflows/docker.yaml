@@ -13,6 +13,10 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  # GitHub reports the LICENSE file as the deprecated SPDX id `GPL-3.0`, which is
+  # what metadata-action picks up by default. pyproject.toml declares the current
+  # `GPL-3.0-only`; keep the image metadata saying the same thing.
+  IMAGE_LICENSE: GPL-3.0-only
 
 jobs:
   build:
@@ -51,6 +55,8 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          labels: |
+            org.opencontainers.image.licenses=${{ env.IMAGE_LICENSE }}
 
       - name: Build and push by digest
         id: build
@@ -112,6 +118,8 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          annotations: |
+            org.opencontainers.image.licenses=${{ env.IMAGE_LICENSE }}
         env:
           DOCKER_METADATA_ANNOTATIONS_LEVELS: index
 
