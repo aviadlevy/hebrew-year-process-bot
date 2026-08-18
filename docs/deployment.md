@@ -1,9 +1,9 @@
-# Running the replier
+# Running the bot
 
-The bot replies to Mastodon mentions from a long-lived container. This
-document is the operating contract for that container: what it needs, how to
-deploy and roll back, how to read its failure modes, and what it does not
-guarantee.
+This document covers two workloads on one host: the long-lived Mastodon
+mention replier, and the daily progress post that runs as a systemd timer.
+It is the operating contract for both: what each needs, how to deploy and
+roll back, how to read their failure modes, and what they do not guarantee.
 
 It assumes a Linux host you can reach over SSH, with an account that can
 `sudo`. Nothing here is specific to a particular machine.
@@ -273,3 +273,149 @@ for hours or days — has **not** been proven. Watch the first several hours of
 logs after a fresh deploy for `Read-only file system` errors. If one appears,
 the fix is a narrowly scoped named volume for that specific path, not
 removing `read_only`.
+
+## 9. The daily progress post
+
+The progress post is a **one-shot**, not a service: a systemd timer runs the
+same pinned image with its entrypoint overridden to `hypb-progress`. It shares
+the replier's image, its `IMAGE_TAG`, and its four secrets, and adds five of
+its own.
+
+### 9.1 Why it remembers things in a database
+
+It used to recover the last published percentage by fetching its own last 50
+Mastodon statuses and regexing the number out of the rendered HTML. That
+coupled posting to Mastodon's markup, and crashed the run with a raw
+`TypeError` whenever those 50 statuses held no progress bar.
+
+It now keeps the number in SQLite on a named volume, **keyed by platform**.
+That last part matters operationally: if Twitter fails and Mastodon succeeds,
+each keeps its own position, so the failed one retries on the next run while
+the successful one does not repeat itself. A run reports `posted`, `skipped`,
+`seeded` or `failed` per platform, and exits 1 if any platform failed.
+
+If a platform has no row yet, the run falls back to reading the Mastodon
+timeline once — so a lost volume recovers on its own. If that finds nothing
+either, it records the current percentage **without posting**: one skipped day
+at worst, never a double post.
+
+### 9.2 Extra configuration
+
+Five variables beyond §2, in a **second** file, `/opt/hypb/progress.env`, also
+`root:root` and `0600`:
+
+| Variable | Where it comes from |
+|---|---|
+| `MASTODON_USER_ID` | The bot's numeric account id on its instance. |
+| `CONSUMER_KEY`, `CONSUMER_SECRET` | Twitter app credentials — Keys and tokens. |
+| `ACCESS_KEY`, `ACCESS_SECRET` | Twitter access token and secret for the bot account. |
+
+They live apart from `.env` on purpose: the replier is long-lived and has no
+use for Twitter credentials, so they stay out of its environment. Neither file
+repeats a secret the other holds, so the two cannot drift.
+
+`BEARER_TOKEN`, which the GitHub Actions workflow exports, is **not** required
+— it belongs to the Twitter streaming client, which this path never touches.
+
+### 9.3 Install
+
+```bash
+# from your local checkout
+scp deploy/progress-run.sh deploy/progress.env.example \
+    <user>@<host>:/opt/hypb/
+scp deploy/hypb-progress.service deploy/hypb-progress.timer \
+    <user>@<host>:/tmp/
+```
+
+```bash
+# on the host
+cd /opt/hypb
+cp progress.env.example progress.env
+$EDITOR progress.env          # fill in the five values
+sudo chown root:root progress.env
+sudo chmod 600 progress.env
+chmod +x progress-run.sh
+
+sudo install -m 0644 /tmp/hypb-progress.service /tmp/hypb-progress.timer \
+    /etc/systemd/system/
+sudo systemctl daemon-reload
+```
+
+**Create the state volume, and give it to the container's user.** A fresh named
+volume is created `root:root`, and the image runs as uid 10001 — without this
+the first run fails on a write it cannot do:
+
+```bash
+sudo docker volume create hypb-state
+sudo docker run --rm -v hypb-state:/var/lib/hypb --user 0:0 \
+    --entrypoint chown \
+    ghcr.io/aviadlevy/hebrew-year-process-bot:<IMAGE_TAG> \
+    -R 10001:10001 /var/lib/hypb
+```
+
+Prove one real run before enabling the timer:
+
+```bash
+sudo systemctl start hypb-progress.service
+sudo journalctl -u hypb-progress.service -n 50 --no-pager
+```
+
+Then enable it:
+
+```bash
+sudo systemctl enable --now hypb-progress.timer
+systemctl list-timers hypb-progress.timer
+```
+
+### 9.4 Changing the time
+
+The host runs in `Etc/UTC` (`timedatectl`), so the shipped
+`OnCalendar=*-*-* 07:00:00` fires at the same instant as the GitHub Actions
+cron it replaced. **Do not edit the unit file** — use a drop-in, which survives
+reinstalling it:
+
+```bash
+sudo systemctl edit hypb-progress.timer
+```
+
+```ini
+[Timer]
+OnCalendar=
+OnCalendar=*-*-* 07:00:00 Asia/Jerusalem
+```
+
+The empty `OnCalendar=` first is required: without it systemd *adds* a
+schedule rather than replacing one, and the job fires twice.
+
+### 9.5 Observing
+
+```bash
+sudo journalctl -u hypb-progress.service --since '2 days ago'
+systemctl list-timers hypb-progress.timer     # last and next firing
+```
+
+Every run also sends a Telegram summary naming each platform's outcome. Most
+days it reports `skipped` for both — the percentage only moves about every 3.5
+days, since a ~354-day year covers 100 steps.
+
+Read the state directly if you need to:
+
+```bash
+sudo docker run --rm -v hypb-state:/var/lib/hypb --user 10001:10001 \
+    --entrypoint python \
+    ghcr.io/aviadlevy/hebrew-year-process-bot:<IMAGE_TAG> \
+    -c "import sqlite3; print(sqlite3.connect('/var/lib/hypb/state.db').execute('SELECT * FROM post_state').fetchall())"
+```
+
+### 9.6 Rollback
+
+The GitHub Actions workflow is kept, with its `cron:` commented out and
+`workflow_dispatch:` intact. To go back:
+
+```bash
+sudo systemctl disable --now hypb-progress.timer
+```
+
+then uncomment `cron:` in `.github/workflows/tweet.yaml`. Running both at once
+is survivable but pointless: whichever fires first posts and records, and the
+second sees the current percentage already stored and posts nothing.
