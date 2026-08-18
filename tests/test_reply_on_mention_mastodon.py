@@ -1,3 +1,4 @@
+import logging
 import random
 from unittest.mock import MagicMock, patch
 
@@ -84,6 +85,53 @@ def test_unsupported_command(mocker):
     spy.assert_not_called()
 
 
+def test_mention_and_reply_are_logged(mocker, caplog):
+    """`docker logs` is the only window into what the replier is doing.
+
+    Without these lines a mention that produced no reply is indistinguishable
+    from one that never arrived, which is the case worth debugging.
+    """
+    with caplog.at_level(logging.INFO, logger="hypb.stream_listener_mastodon"):
+        _, status = base_flow(mocker, "What's the date?")
+
+    logged = caplog.text
+    assert f"status_id={status['id']}" in logged
+    assert "What's the date?".lower() in logged.lower()
+    assert "replying to status_id" in logged
+
+
+def test_unmatched_mention_says_why_it_was_ignored(mocker, caplog):
+    with caplog.at_level(logging.INFO, logger="hypb.stream_listener_mastodon"):
+        base_flow(mocker, "What's up dude?")
+
+    assert "no keyword matched" in caplog.text
+
+
+def test_non_mention_notification_is_logged_and_ignored(mocker, caplog):
+    listener = _StreamingListener(MagicMock())
+    notification = create_notification("hello", status_id=1)
+    notification["type"] = "favourite"
+
+    with caplog.at_level(logging.INFO, logger="hypb.stream_listener_mastodon"):
+        assert listener.on_notification(notification) is None
+
+    assert "type=favourite" in caplog.text
+
+
+def test_failure_to_reply_is_logged_with_a_traceback(mocker, caplog):
+    """An alert alone loses the stack; the log has to keep it."""
+    mastodon = MagicMock()
+    mastodon.status_reply.side_effect = RuntimeError("boom")
+    mocker.patch("hypb.stream_listener_mastodon.send_alert")
+    listener = _StreamingListener(mastodon)
+
+    with caplog.at_level(logging.ERROR, logger="hypb.stream_listener_mastodon"):
+        listener.on_notification(create_notification("What's the date?", status_id=7))
+
+    assert "failed to handle mention" in caplog.text
+    assert "RuntimeError: boom" in caplog.text
+
+
 def test_main_returns_2_on_missing_config(monkeypatch, mocker):
     """main() must fail fast on missing config, before ever attempting an alert.
 
@@ -98,6 +146,34 @@ def test_main_returns_2_on_missing_config(monkeypatch, mocker):
 
     assert main() == 2
     assert not send_alert.called
+
+
+def test_bad_log_level_does_not_stop_the_replier(monkeypatch, mocker):
+    """A typo in LOG_LEVEL must not be fatal — answering mentions comes first."""
+    monkeypatch.setenv("LOG_LEVEL", "verbose")
+    for var in REQUIRED_REPLIER_VARS:
+        monkeypatch.delenv(var, raising=False)
+    mocker.patch("hypb.reply_on_mention_mastodon.send_alert")
+
+    assert main() == 2
+
+
+def test_debug_logging_never_enables_urllib3_request_logging(monkeypatch, mocker):
+    """LOG_LEVEL=DEBUG must not publish the Telegram bot token.
+
+    urllib3 logs each request line at DEBUG, and the token is inside the URL
+    ("POST /bot<TOKEN>/sendMessage"), so raising our own verbosity must not
+    raise urllib3's.
+    """
+    monkeypatch.setenv("LOG_LEVEL", "DEBUG")
+    for var in REQUIRED_REPLIER_VARS:
+        monkeypatch.delenv(var, raising=False)
+    mocker.patch("hypb.reply_on_mention_mastodon.send_alert")
+    logging.getLogger("urllib3").setLevel(logging.NOTSET)
+
+    main()
+
+    assert not logging.getLogger("urllib3").isEnabledFor(logging.DEBUG)
 
 
 def test_reply_supervises_the_stream_instead_of_exiting_when_it_drops():

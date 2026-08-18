@@ -1,4 +1,5 @@
 import logging
+import os
 import sys
 import traceback
 
@@ -23,11 +24,25 @@ def reply():
 
 
 def main() -> int:
+    # LOG_LEVEL=DEBUG turns on per-event stream logging (heartbeats included)
+    # without a code change, so `docker logs` can be made verbose on demand. A
+    # typo must not stop the replier from answering mentions, so it falls back
+    # to INFO and says so.
+    requested_level = os.getenv("LOG_LEVEL", "INFO").upper()
+    level = requested_level if requested_level in logging.getLevelNamesMapping() else "INFO"
     logging.basicConfig(
-        level=logging.INFO,
+        level=level,
         stream=sys.stderr,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
+    if level != requested_level:
+        logger.warning("unknown LOG_LEVEL %r; falling back to INFO", requested_level)
+
+    # urllib3 logs every request line at DEBUG, and the Telegram bot token is
+    # part of that URL ("POST /bot<TOKEN>/sendMessage"). LOG_LEVEL=DEBUG is for
+    # seeing our own stream events, never for publishing a secret to the
+    # container log, so the HTTP libraries stay at INFO whatever we run at.
+    logging.getLogger("urllib3").setLevel(logging.INFO)
     try:
         require(REQUIRED_REPLIER_VARS)
     except ConfigurationError as e:
