@@ -13,6 +13,9 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  # GitHub detects the LICENSE file as the deprecated `GPL-3.0`; pyproject.toml
+  # declares the current id, so pin it rather than inherit the default.
+  IMAGE_LICENSE: GPL-3.0-only
 
 jobs:
   build:
@@ -51,6 +54,8 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          labels: |
+            org.opencontainers.image.licenses=${{ env.IMAGE_LICENSE }}
 
       - name: Build and push by digest
         id: build
@@ -112,6 +117,8 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          annotations: |
+            org.opencontainers.image.licenses=${{ env.IMAGE_LICENSE }}
         env:
           DOCKER_METADATA_ANNOTATIONS_LEVELS: index
 
