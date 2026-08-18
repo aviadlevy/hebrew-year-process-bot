@@ -1,9 +1,22 @@
+import logging
 import traceback
 
 from mastodon import Mastodon, StreamListener
 
 from hypb.tweet_helper import get_text_to_reply
 from hypb.utils import send_alert
+
+logger = logging.getLogger(__name__)
+
+#: Toot bodies are arbitrary user input and arrive as HTML; a long one would
+#: bury the rest of the log line for no extra diagnostic value.
+MAX_LOGGED_CONTENT_CHARS = 500
+
+
+def _truncate(text: str) -> str:
+    if len(text) <= MAX_LOGGED_CONTENT_CHARS:
+        return text
+    return text[:MAX_LOGGED_CONTENT_CHARS] + f"... [{len(text) - MAX_LOGGED_CONTENT_CHARS} more chars]"
 
 
 class _StreamingListener(StreamListener):
@@ -31,16 +44,46 @@ class _StreamingListener(StreamListener):
         """
         if not event:
             return None
+        logger.debug("stream event: %s", event.get("event"))
         return super()._dispatch(event)
 
+    def handle_heartbeat(self):
+        """Proof the connection is alive, at DEBUG so it cannot flood the log."""
+        logger.debug("stream heartbeat")
+
     def on_notification(self, notification):
-        if notification["type"] == "mention":
-            try:
-                reply = get_text_to_reply(notification.status.content.lower())
-                if reply:
-                    return self.reply_to_toot(notification, reply)
-            except Exception as e:
-                send_alert("exception: " + repr(e) + "\n" + traceback.format_exc())
+        notification_type = notification.get("type")
+        if notification_type != "mention":
+            logger.info("ignoring notification id=%s type=%s", notification.get("id"), notification_type)
+            return None
+
+        status = notification.get("status") or {}
+        account = notification.get("account") or {}
+        content = status.get("content") or ""
+        logger.info(
+            "mention id=%s status_id=%s from=@%s language=%s visibility=%s content=%r",
+            notification.get("id"),
+            status.get("id"),
+            account.get("acct"),
+            status.get("language"),
+            status.get("visibility"),
+            _truncate(content),
+        )
+
+        try:
+            reply = get_text_to_reply(content.lower())
+            if not reply:
+                logger.info("no keyword matched in status_id=%s; not replying", status.get("id"))
+                return None
+            logger.info("replying to status_id=%s with %r", status.get("id"), _truncate(reply))
+            posted = self.reply_to_toot(notification, reply)
+        except Exception as e:
+            logger.exception("failed to handle mention id=%s status_id=%s", notification.get("id"), status.get("id"))
+            send_alert("exception: " + repr(e) + "\n" + traceback.format_exc())
+            return None
+
+        logger.info("replied to status_id=%s; reply status_id=%s", status.get("id"), (posted or {}).get("id"))
+        return posted
 
     def reply_to_toot(self, notification, message: str):
         return self.mastodon_client.status_reply(to_status=notification.status, status=message)

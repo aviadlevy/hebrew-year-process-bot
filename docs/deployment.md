@@ -54,6 +54,12 @@ Four secrets plus the image tag:
 | `TELEGRAM_CHAT_ID` | Send the bot any message, then call `https://api.telegram.org/bot<TELEGRAM_TOKEN>/getUpdates` and read `message.chat.id`. |
 | `IMAGE_TAG` | Which published image to run — see [§3](#3-pick-an-image-tag). Not a secret, but required. |
 
+One optional setting: `LOG_LEVEL` (`DEBUG`, `INFO`, `WARNING`, `ERROR`).
+Unset means `INFO`, which logs every mention received and every reply sent.
+`DEBUG` adds each raw stream event and the ~15s keepalives — useful when the
+stream looks stuck and you need proof the connection is alive. An unrecognised
+value falls back to `INFO` with a warning rather than stopping the replier.
+
 The env file must be owned `root:root`, mode `0600`. `0600` is the part that
 matters: the tokens stay unreadable to every other account on the host, and to
 anything running as your login user — a backup job, a stray `scp -r`. Root
