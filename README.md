@@ -21,3 +21,8 @@ This bot publish the progress of the Hebrew calendar year.
 <blockquote class="twitter-tweet" data-lang="en"><p lang="und" dir="ltr">▓▓░░░░░░░░░░░░░ 17%</p>&mdash; Hebrew Year Progress (@yearProgressHeb) <a href="https://mastodon.social/@yearProgressHeb/113585373770390214">Dec 02, 2024</a></blockquote>
 </div>
 
+## Running the replier
+
+The bot replies to Mastodon mentions from an always-on container.
+See [docs/deployment.md](docs/deployment.md) for host setup, deploys, and rollback.
+

@@ -1,7 +1,7 @@
 import re
 
-from constant import EMPTY_SYMBOL, PROGRESS_BAR_WIDTH, PROGRESS_SYMBOL
-from lang import MESSAGES
+from hypb.constant import EMPTY_SYMBOL, PROGRESS_BAR_WIDTH, PROGRESS_SYMBOL
+from hypb.lang import MESSAGES
 
 
 def get_last_state(toots):

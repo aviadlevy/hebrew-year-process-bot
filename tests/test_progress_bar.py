@@ -1,4 +1,4 @@
-from progress_bar import ProgressBar
+from hypb.progress_bar import ProgressBar
 
 
 def test_init():

@@ -1,0 +1,21 @@
+services:
+  mastodon-replier:
+    image: ghcr.io/aviadlevy/hebrew-year-process-bot:${IMAGE_TAG:?set IMAGE_TAG in .env}
+    container_name: hypb-mastodon-replier
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      TZ: Asia/Jerusalem
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

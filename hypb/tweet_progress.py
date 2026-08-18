@@ -1,13 +1,22 @@
 import asyncio
+import logging
 import sys
 import traceback
 
-from config import get_async_twitter_client, get_mastodon_client, run_in_executor
-from constant import EMPTY_SYMBOL, MASTODON_USER_ID, PROGRESS_BAR_WIDTH, PROGRESS_SYMBOL
-from dates_helper import get_current_state
-from progress_bar import ProgressBar
-from tweet_helper import get_last_state, should_tweet
-from utils import send_async_alert
+from hypb.config import get_async_twitter_client, get_mastodon_client, run_in_executor
+from hypb.constant import (
+    EMPTY_SYMBOL,
+    MASTODON_USER_ID,
+    PROGRESS_BAR_WIDTH,
+    PROGRESS_SYMBOL,
+)
+from hypb.dates_helper import get_current_state
+from hypb.progress_bar import ProgressBar
+from hypb.settings import REQUIRED_PROGRESS_VARS, ConfigurationError, require
+from hypb.tweet_helper import get_last_state, should_tweet
+from hypb.utils import send_async_alert
+
+logger = logging.getLogger(__name__)
 
 
 @run_in_executor
@@ -56,10 +65,24 @@ async def tweet():
         await twitter_client.create_tweet(text=progress_bar)
         await toot(mastodon_client, progress_bar)
         is_tweeted = True
-    print(f"tweeted? -> {is_tweeted}. current state -> {current_state} .last state -> {last_state}ø")
+    logger.info("tweeted? -> %s. current state -> %s .last state -> %sø", is_tweeted, current_state, last_state)
     await send_async_alert(f"tweeted? -> {is_tweeted}. current state -> {current_state} .last state -> {last_state}ø")
     return 0
 
 
+def main() -> int:
+    logging.basicConfig(
+        level=logging.INFO,
+        stream=sys.stderr,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
+    try:
+        require(REQUIRED_PROGRESS_VARS)
+    except ConfigurationError as e:
+        logger.error("%s", e)
+        return 2
+    return asyncio.run(tweet())
+
+
 if __name__ == "__main__":
-    sys.exit(asyncio.run(tweet()))
+    sys.exit(main())

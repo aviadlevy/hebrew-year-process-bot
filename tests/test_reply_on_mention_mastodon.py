@@ -1,9 +1,12 @@
 import random
+from unittest.mock import MagicMock
 
 from mastodon import Mastodon
 
 from hypb.dates_helper import get_current_date, get_current_parashah
 from hypb.lang import get_eng_yom_tov, get_heb_yom_tov
+from hypb.reply_on_mention_mastodon import main
+from hypb.settings import REQUIRED_REPLIER_VARS
 from hypb.stream_listener_mastodon import _StreamingListener
 
 
@@ -78,3 +81,102 @@ def test_upcoming_holiday_heb(mocker):
 def test_unsupported_command(mocker):
     spy, _ = base_flow(mocker, "What's up dude?")
     spy.assert_not_called()
+
+
+def test_main_returns_2_on_missing_config(monkeypatch, mocker):
+    """main() must fail fast on missing config, before ever attempting an alert.
+
+    hypb/utils.py reads TELEGRAM_TOKEN at import time and bakes it into a URL,
+    so a missing token makes every alert 404 silently. Validation must return
+    before reply() or send_alert() are ever reached.
+    """
+    for var in REQUIRED_REPLIER_VARS:
+        monkeypatch.delenv(var, raising=False)
+
+    send_alert = mocker.patch("hypb.reply_on_mention_mastodon.send_alert")
+
+    assert main() == 2
+    assert not send_alert.called
+
+
+def test_main_returns_1_when_stream_closes_cleanly(monkeypatch, mocker):
+    """mastodon-py's stream_user() returns normally on a clean server-side close
+    (it only raises on ChunkedEncodingError/ReadTimeout/ConnectionError). That
+    must still surface as a runtime failure, not a successful exit."""
+    for var in REQUIRED_REPLIER_VARS:
+        monkeypatch.setenv(var, "test-value")
+
+    mastodon_client = MagicMock()
+    mastodon_client.stream_user.return_value = None
+    mocker.patch("hypb.reply_on_mention_mastodon.get_mastodon_client", return_value=mastodon_client)
+    mocker.patch("hypb.reply_on_mention_mastodon.get_mastodon_stream_listener", return_value=MagicMock())
+    send_alert = mocker.patch("hypb.reply_on_mention_mastodon.send_alert")
+
+    assert main() == 1
+    assert not send_alert.called
+
+
+def test_main_returns_1_and_alerts_when_reply_raises(monkeypatch, mocker):
+    """When reply() blows up, main() must log it, alert, and return 1.
+
+    This is the mirror image of test_main_returns_1_when_stream_closes_cleanly:
+    both return 1, but only a genuine runtime failure should page anyone.
+    """
+    for var in REQUIRED_REPLIER_VARS:
+        monkeypatch.setenv(var, "test-value")
+
+    mocker.patch("hypb.reply_on_mention_mastodon.reply", side_effect=RuntimeError("boom"))
+    send_alert = mocker.patch("hypb.reply_on_mention_mastodon.send_alert")
+
+    assert main() == 1
+    assert send_alert.called
+
+
+class FakeStreamResponse:
+    """Replays a raw byte stream the way requests' iter_content does."""
+
+    def __init__(self, payload: bytes):
+        self.payload = payload
+
+    def iter_content(self, chunk_size=1):
+        for byte in self.payload:
+            yield bytes([byte])
+
+
+# mastodon.social sends a keepalive roughly every 15 seconds: a comment line
+# starting with ':', then the blank line that terminates the SSE block.
+HEARTBEAT = b":thump\n\n"
+
+
+def test_heartbeat_does_not_abort_the_stream():
+    """A keepalive must not kill the replier.
+
+    mastodon-py 1.8.1's _parse_line() calls handle_heartbeat() for a ':' comment
+    and returns the event dict untouched — still empty. The blank line that
+    follows then reaches _dispatch({}), which reads event['event'] and raises
+    MastodonMalformedEventError. Upstream fixed this in 2.x by guarding
+    _dispatch with `if not event: return`; we backport that guard.
+
+    Without the guard this crashes the process roughly every 15 seconds, so the
+    always-on replier can never stay up.
+    """
+    listener = _StreamingListener(mastodon_client=MagicMock())
+
+    listener.handle_stream(FakeStreamResponse(HEARTBEAT))
+
+
+def test_real_event_still_dispatches_after_a_heartbeat():
+    """The guard must skip only empty events, never real ones.
+
+    A guard that swallowed everything would make this test the only thing
+    standing between a silent bot and nobody noticing.
+    """
+    listener = _StreamingListener(mastodon_client=MagicMock())
+    received = []
+    listener.on_update = received.append
+
+    payload = HEARTBEAT + b'event: update\ndata: {"content": "hello"}\n\n'
+    listener.handle_stream(FakeStreamResponse(payload))
+
+    assert len(received) == 1, "the real update event was not dispatched"
+    assert received[0]["content"] == "hello"
