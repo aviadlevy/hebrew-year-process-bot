@@ -319,6 +319,17 @@ repeats a secret the other holds, so the two cannot drift.
 
 ### 9.3 Install
 
+**Pin an `IMAGE_TAG` that contains the state store first.** The state store
+landed in this branch; any tag cut before it still runs the old
+`get_last_state()`-only `tweet()`, which awaits Twitter before Mastodon and
+crashes with a raw `TypeError` the moment the last 50 statuses hold no
+progress toot. If `IMAGE_TAG` in `/opt/hypb/.env` still points at such a tag,
+`sudo systemctl start hypb-progress.service` below starts the old code against
+the live account, and the traceback it produces reads like this document's fix
+is broken rather than like a stale pin. Cut a release tag from a checkout that
+includes the state store (§3), then update `IMAGE_TAG` the same way as any
+other deploy (§5), before continuing.
+
 ```bash
 # from your local checkout
 scp deploy/progress-run.sh deploy/progress.env.example \
@@ -340,6 +351,27 @@ sudo install -m 0644 /tmp/hypb-progress.service /tmp/hypb-progress.timer \
     /etc/systemd/system/
 sudo systemctl daemon-reload
 ```
+
+**Hand `progress-run.sh` and its directory to root.** The timer runs this
+script unattended, as root, once a day — `ExecStart` in
+`hypb-progress.service` has no other way to invoke it. `chmod +x` above only
+sets the execute bit; the script and `/opt/hypb` itself are still owned by
+your login user from §4, which means anything running as that user can
+rewrite the script, or — since directory write permission allows unlinking —
+delete and replace the `0600 root:root` `.env` with one pointing `IMAGE_TAG` at
+an arbitrary image that then runs as root on a timer. That is exactly the
+escalation §1 keeps your user out of the `docker` group to prevent, so the
+script and its directory need the same root ownership:
+
+```bash
+sudo chown root:root /opt/hypb/progress-run.sh
+sudo chmod 755 /opt/hypb/progress-run.sh
+sudo chown root:root /opt/hypb
+```
+
+§2 already warns that every later edit under `/opt/hypb` needs `sudo` once
+ownership moves to root, so this changes nothing about the routine deploys in
+§5 and §6.
 
 **Create the state volume, and give it to the container's user.** A fresh named
 volume is created `root:root`, and the image runs as uid 10001 — without this
@@ -416,7 +448,12 @@ Every run also sends a Telegram summary naming each platform's outcome. Most
 days it reports `skipped` for both — the percentage only moves about every 3.5
 days, since a ~354-day year covers 100 steps.
 
-Read the state directly if you need to:
+Read the state directly if you need to. `<IMAGE_TAG>` below is whatever is
+currently pinned in `/opt/hypb/.env`, which is `0600 root:root`:
+
+```bash
+sudo grep IMAGE_TAG /opt/hypb/.env
+```
 
 ```bash
 sudo docker run --rm -v hypb-state:/var/lib/hypb --user 10001:10001 \
