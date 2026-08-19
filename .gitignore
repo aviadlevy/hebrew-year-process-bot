@@ -85,6 +85,10 @@ celerybeat-schedule
 
 # Environments
 .env
+# The progress job's secret-bearing env file. It belongs only on the host at
+# /opt/hypb/progress.env; deploy/progress.env.example is the template and stays
+# tracked, since this pattern matches the exact name and not the .example suffix.
+progress.env
 .venv
 env/
 venv/
