@@ -1,7 +1,13 @@
 name: Tweet
 on:
-  schedule:
-    - cron:  '0 7 * * *'
+  # Retired 2026-08-19: the daily post now runs from a systemd timer on the
+  # host at the same instant (the host is UTC, so OnCalendar=*-*-* 07:00:00
+  # matches the cron below). See docs/deployment.md §9.
+  # The workflow is deliberately kept, not deleted: workflow_dispatch is the
+  # manual fallback for posting if the host is unavailable, and re-enabling
+  # the schedule is the documented rollback.
+  # schedule:
+  #   - cron:  '0 7 * * *'
   workflow_dispatch:
 
 permissions:
