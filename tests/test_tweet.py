@@ -19,6 +19,10 @@ should_tweet_test_data = [
     (100, 1, False),
     (2, 3, True),
     (100, 0, True),
+    # No previous state. This raised TypeError -- `current_state > None` --
+    # and took the whole run down with a raw traceback whenever the last 50
+    # statuses held no progress toot. The caller records instead of posting.
+    (None, 50, False),
 ]
 
 is_holiday_tweeted_today_test_data = [

@@ -26,9 +26,28 @@ def redact(text: str) -> str:
     return text
 
 
-async def send_async_alert(msg):
-    async with aiohttp.ClientSession() as session, session.post(TELEGRAM_API_URL, json={"chat_id": CHAT_ID, "text": msg}) as response:
-        return await response.text()
+async def send_async_alert(msg) -> bool:
+    """Send a Telegram message, reporting whether Telegram accepted it.
+
+    The async twin of send_alert, and hardened for the same reason: a wrong
+    token or chat id is answered with 4xx and `ok: false` rather than a
+    transport error, so the previous fire-and-forget post could not tell a
+    working alerting path from a broken one.
+    """
+    timeout = aiohttp.ClientTimeout(total=TELEGRAM_TIMEOUT_SECONDS)
+    try:
+        async with (
+            aiohttp.ClientSession(timeout=timeout) as session,
+            session.post(TELEGRAM_API_URL, json={"chat_id": CHAT_ID, "text": msg}) as response,
+        ):
+            if not response.ok:
+                logger.error("telegram rejected the alert: HTTP %s %s", response.status, redact(await response.text()))
+                return False
+    except (aiohttp.ClientError, TimeoutError) as e:
+        logger.error("telegram alert could not be sent: %s", redact(repr(e)))
+        return False
+
+    return True
 
 
 def send_alert(msg) -> bool:

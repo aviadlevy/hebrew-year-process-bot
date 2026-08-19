@@ -31,6 +31,11 @@ jobs:
           MASTODON_ACCESS_TOKEN: ${{secrets.MASTODON_ACCESS_TOKEN}}
           MASTODON_BASE_URL: ${{secrets.MASTODON_BASE_URL}}
           MASTODON_USER_ID: ${{secrets.MASTODON_USER_ID}}
+          # The runner is ephemeral and unprivileged: without this the store
+          # would try to create /var/lib/hypb and raise PermissionError. An
+          # empty file per run means every run seeds from the Mastodon
+          # timeline -- exactly what this workflow did before the store existed.
+          STATE_DB_PATH: ${{ runner.temp }}/hypb-state.db
         run: uv run --no-dev python hypb/tweet_progress.py
 
       - name: Alert on failure

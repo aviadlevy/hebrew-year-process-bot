@@ -18,6 +18,12 @@ def get_last_state(toots):
 
 
 def should_tweet(last_state, current_state):
+    # A platform with no recorded percentage has nothing to compare against.
+    # The old code let get_last_state()'s None reach the expression below and
+    # crashed on `current_state > None`; the caller now records the current
+    # percentage instead of posting it.
+    if last_state is None:
+        return False
     return current_state > last_state or (last_state == 100 and current_state == 0)  # noqa: PLR2004
 
 

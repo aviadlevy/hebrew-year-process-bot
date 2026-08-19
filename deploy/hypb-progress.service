@@ -1,0 +1,10 @@
+[Unit]
+Description=Post the Hebrew year progress bar
+Documentation=https://github.com/aviadlevy/hebrew-year-process-bot/blob/main/docs/deployment.md
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+TimeoutStartSec=600
+ExecStart=/opt/hypb/progress-run.sh
