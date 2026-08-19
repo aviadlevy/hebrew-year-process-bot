@@ -116,6 +116,41 @@ async def test_nothing_is_posted_when_there_is_no_history_to_seed_from(store, cl
 
 
 @pytest.mark.asyncio
+async def test_a_seed_is_recorded_even_when_there_is_nothing_to_post(store, clients, mocker):
+    """The timeline read must leave a row behind, not just inform one decision.
+
+    Found on the host: with the store empty and the percentage unchanged, every
+    run resolved the seed, reported `skipped`, and wrote nothing -- so the next
+    run read Mastodon again. That leaves the bot coupled to the markup the store
+    exists to stop depending on, and leaves a restart nothing to recover from,
+    for however many days pass before the percentage moves.
+    """
+    mastodon_client, twitter_client = clients
+    mocker.patch("hypb.tweet_progress.get_current_state", return_value=49)
+
+    assert await tweet() == 0
+
+    assert not mastodon_client.toot.called, "nothing to post: the percentage has not moved"
+    assert not twitter_client.create_tweet.called
+    assert store.get(MASTODON) == 49
+    assert store.get(TWITTER) == 49
+
+
+@pytest.mark.asyncio
+async def test_a_recorded_seed_stops_the_timeline_being_read_again(store, clients, mocker):
+    """The second run is the point of the first one writing a row."""
+    mastodon_client, _ = clients
+    mocker.patch("hypb.tweet_progress.get_current_state", return_value=49)
+
+    assert await tweet() == 0
+    assert mastodon_client.account_statuses.called, "first run has no row and must seed"
+
+    mastodon_client.account_statuses.reset_mock()
+    assert await tweet() == 0
+    assert not mastodon_client.account_statuses.called, "the row is authoritative now"
+
+
+@pytest.mark.asyncio
 async def test_the_stored_percentage_wins_over_the_timeline(store, clients):
     """Once written, the database is authoritative and Mastodon is not read."""
     mastodon_client, twitter_client = clients

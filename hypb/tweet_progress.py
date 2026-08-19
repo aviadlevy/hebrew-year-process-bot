@@ -115,9 +115,16 @@ async def tweet():
         # concurrently, the database is on local disk, and each call is
         # sub-millisecond -- there is nothing for blocking the event loop to
         # starve.
-        last_state = store.get(platform)
-        if last_state is None:
-            last_state = seed
+        stored_state = store.get(platform)
+        last_state = seed if stored_state is None else stored_state
+
+        if stored_state is None and last_state is not None:
+            # A seed recovered from the timeline is recorded, not merely used.
+            # Without this the row stays absent until the first post, so every
+            # run in between re-reads Mastodon -- leaving the bot coupled to the
+            # markup this store exists to stop depending on, and leaving nothing
+            # for a restart to recover from.
+            store.set(platform, last_state)
 
         if last_state is None:
             # Nothing to compare against and no way to learn it.
