@@ -226,8 +226,10 @@ mastodon stream ended (MastodonNetworkError('Server ceased communication.')); re
 ```
 
 Reconnects back off 1s → 2s → 4s … capped at 60s. A stream that stayed up for
-60s counts as healthy and resets the backoff, so a routine recycle is always
-followed by an immediate retry rather than an inherited delay.
+5s had connected, so its drop resets the backoff: a server that cuts every
+stream after ~15s costs a second of downtime per cut, not a growing delay. A
+stream that stayed up for 60s counts as healthy and also ends the outage, so
+the five-minute alert below only fires if streams keep failing to stay up.
 
 Exit codes and alerts distinguish what is left:
 

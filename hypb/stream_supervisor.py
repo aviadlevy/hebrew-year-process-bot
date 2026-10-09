@@ -46,6 +46,13 @@ RECOVERABLE_ERRORS = (
 INITIAL_BACKOFF_SECONDS = 1.0
 MAX_BACKOFF_SECONDS = 60.0
 
+#: A stream that stayed up this long was accepted by the server and kept alive
+#: by at least one keepalive, so the reconnect after it is a fresh attempt, not
+#: a retry against a server that is refusing us. Only the backoff resets: the
+#: outage clock keeps running, so a stream that is cut every few seconds still
+#: pages once it has failed to stay up for minutes.
+CONNECTED_STREAM_SECONDS = 5.0
+
 #: A stream that stayed up this long did its job; the drop that ended it is an
 #: isolated incident, so the backoff and the outage clock start over.
 HEALTHY_STREAM_SECONDS = 60.0
@@ -62,6 +69,7 @@ class RetryPolicy:
 
     initial_backoff_seconds: float = INITIAL_BACKOFF_SECONDS
     max_backoff_seconds: float = MAX_BACKOFF_SECONDS
+    connected_stream_seconds: float = CONNECTED_STREAM_SECONDS
     healthy_stream_seconds: float = HEALTHY_STREAM_SECONDS
     alert_after_seconds: float = ALERT_AFTER_SECONDS
 
@@ -106,6 +114,9 @@ class StreamSupervisor:
                 backoff = self._policy.initial_backoff_seconds
                 outage_started_at = None
                 alerted = False
+
+            elif ended_at - started_at >= self._policy.connected_stream_seconds:
+                backoff = self._policy.initial_backoff_seconds
 
             if outage_started_at is None:
                 outage_started_at = ended_at

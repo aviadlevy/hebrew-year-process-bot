@@ -18,6 +18,7 @@ from requests.exceptions import ConnectionError as RequestsConnectionError
 
 from hypb.stream_supervisor import (
     ALERT_AFTER_SECONDS,
+    CONNECTED_STREAM_SECONDS,
     HEALTHY_STREAM_SECONDS,
     INITIAL_BACKOFF_SECONDS,
     MAX_BACKOFF_SECONDS,
@@ -157,6 +158,46 @@ def test_a_stream_that_did_real_work_resets_the_backoff(mocker):
     assert clock.slept == [1.0, 2.0, 1.0], "the healthy stream did not reset the backoff"
 
 
+def test_a_stream_cut_every_few_seconds_reconnects_immediately(mocker):
+    """The server cutting every stream at ~16s must not make the backoff climb.
+
+    Each of those streams connected and was served before it dropped, so the next
+    reconnect is a fresh attempt, not a retry against a dead server. Letting the
+    backoff grow to its cap left the replier offline for ~60s of every ~76s, and
+    streaming never replays what arrived in the gap.
+    """
+    clock = FakeClock()
+    steps = [(16.0, MastodonNetworkError("Server ceased communication."))] * 6
+    supervisor, _ = build(clock, steps, mocker.MagicMock())
+
+    run_until_exhausted(supervisor)
+
+    assert clock.slept == [1.0] * 6
+
+
+def test_a_connection_that_never_came_up_still_backs_off(mocker):
+    """The reset must be earned by actually connecting, not just by failing slowly."""
+    clock = FakeClock()
+    steps = [(CONNECTED_STREAM_SECONDS - 1, MastodonNetworkError("drop"))] * 3
+    supervisor, _ = build(clock, steps, mocker.MagicMock())
+
+    run_until_exhausted(supervisor)
+
+    assert clock.slept == [1.0, 2.0, 4.0]
+
+
+def test_constant_cutting_still_pages_once_the_outage_is_sustained(mocker):
+    """Reconnecting fast must not hide a stream that has not stayed up for minutes."""
+    clock = FakeClock()
+    alert = mocker.MagicMock()
+    steps = [(16.0, MastodonNetworkError("Server ceased communication."))] * 4
+    supervisor, _ = build(clock, steps, alert)
+
+    run_until_exhausted(supervisor)
+
+    assert alert.call_count == 1
+
+
 def test_sustained_outage_alerts_exactly_once(mocker):
     """Being unable to reconnect for minutes is a real failure worth paging on.
 
@@ -210,5 +251,6 @@ def test_defaults_are_the_documented_operational_values():
     """These numbers are quoted in docs/deployment.md; keep them honest."""
     assert INITIAL_BACKOFF_SECONDS == 1.0
     assert MAX_BACKOFF_SECONDS == 60.0
+    assert CONNECTED_STREAM_SECONDS == 5.0
     assert HEALTHY_STREAM_SECONDS == 60.0
     assert ALERT_AFTER_SECONDS == 300.0
