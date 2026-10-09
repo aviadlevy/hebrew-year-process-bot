@@ -268,3 +268,65 @@ def test_real_event_still_dispatches_after_a_heartbeat():
 
     assert len(received) == 1, "the real update event was not dispatched"
     assert received[0]["content"] == "hello"
+
+
+def _listener_with_notifier(mastodon=None):
+    notify = MagicMock(return_value=True)
+    return _StreamingListener(mastodon or MagicMock(), notify=notify), notify
+
+
+def test_replied_mention_is_notified_with_its_outcome():
+    listener, notify = _listener_with_notifier()
+
+    listener.on_notification(create_notification("What's the date?", status_id=1))
+
+    notify.assert_called_once()
+    message = notify.call_args.args[0]
+    assert message.startswith("mastodon mention")
+    assert "What's the date?" in message
+    assert "outcome: replied" in message
+
+
+def test_unmatched_mention_is_notified_as_not_replied():
+    listener, notify = _listener_with_notifier()
+
+    listener.on_notification(create_notification("What's up dude?", status_id=1))
+
+    assert "outcome: not replied (no keyword matched)" in notify.call_args.args[0]
+
+
+def test_failed_mention_is_notified_as_failed():
+    mastodon = MagicMock()
+    mastodon.status_reply.side_effect = RuntimeError("boom")
+    listener, notify = _listener_with_notifier(mastodon)
+
+    listener.on_notification(create_notification("What's the date?", status_id=1))
+
+    assert "outcome: failed: RuntimeError('boom')" in notify.call_args.args[0]
+
+
+def test_non_mention_is_not_notified():
+    listener, notify = _listener_with_notifier()
+    notification = create_notification("hello", status_id=1)
+    notification["type"] = "favourite"
+
+    listener.on_notification(notification)
+
+    notify.assert_not_called()
+
+
+def test_notifier_failure_does_not_lose_the_reply():
+    mastodon = MagicMock()
+    listener = _StreamingListener(mastodon, notify=MagicMock(return_value=False))
+
+    listener.on_notification(create_notification("What's the date?", status_id=1))
+
+    mastodon.status_reply.assert_called_once()
+
+
+def test_default_notifier_is_the_telegram_alert(no_telegram):
+    listener = _StreamingListener(MagicMock())
+
+    listener.on_notification(create_notification("What's the date?", status_id=1))
+
+    no_telegram.assert_called_once()
