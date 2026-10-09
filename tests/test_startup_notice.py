@@ -61,18 +61,18 @@ def test_startup_message_falls_back_when_metadata_is_absent():
     assert "instance: unknown" in message
 
 
-def test_main_announces_itself_before_it_starts_streaming(monkeypatch, mocker):
+def test_main_announces_itself_before_it_starts_polling(monkeypatch, mocker):
     """The notice is only useful if it precedes the work it is announcing."""
     for var in REQUIRED_REPLIER_VARS:
         monkeypatch.setenv(var, "test-value")
 
     calls = []
     mocker.patch("hypb.reply_on_mention_mastodon.send_alert", side_effect=lambda msg: calls.append("alert") or True)
-    mocker.patch("hypb.reply_on_mention_mastodon.reply", side_effect=lambda: calls.append("reply"))
+    mocker.patch("hypb.reply_on_mention_mastodon.reply", side_effect=lambda *a: calls.append("reply"))
 
     main()
 
-    assert calls[:2] == ["alert", "reply"], "the startup notice did not precede streaming"
+    assert calls[:2] == ["alert", "reply"], "the startup notice did not precede polling"
 
 
 def test_a_rejected_startup_notice_is_logged_but_does_not_stop_the_replier(monkeypatch, mocker, caplog):

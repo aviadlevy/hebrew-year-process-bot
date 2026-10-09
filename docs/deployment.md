@@ -54,11 +54,19 @@ Four secrets plus the image tag:
 | `TELEGRAM_CHAT_ID` | Send the bot any message, then call `https://api.telegram.org/bot<TELEGRAM_TOKEN>/getUpdates` and read `message.chat.id`. |
 | `IMAGE_TAG` | Which published image to run — see [§3](#3-pick-an-image-tag). Not a secret, but required. |
 
-One optional setting: `LOG_LEVEL` (`DEBUG`, `INFO`, `WARNING`, `ERROR`).
-Unset means `INFO`, which logs every mention received and every reply sent.
-`DEBUG` adds each raw stream event and the ~15s keepalives — useful when the
-stream looks stuck and you need proof the connection is alive. An unrecognised
-value falls back to `INFO` with a warning rather than stopping the replier.
+Optional settings:
+
+- `LOG_LEVEL` (`DEBUG`, `INFO`, `WARNING`, `ERROR`). Unset means `INFO`, which
+  logs every mention received and every reply sent. An unrecognised value falls
+  back to `INFO` with a warning rather than stopping the replier.
+- `MENTION_MAX_AGE_MINUTES`, default `30`. A mention older than this is reported
+  to Telegram as `skipped` and not answered, so a long outage does not end with
+  the bot replying to questions nobody is waiting on.
+- `POLL_INTERVAL_SECONDS`, default `30`. The longest a mention waits before the
+  bot looks at it.
+
+A bad number in either of the last two stops the start (exit 2) and names the
+variable, rather than running with a cutoff you did not mean.
 
 The env file must be owned `root:root`, mode `0600`. `0600` is the part that
 matters: the tokens stay unreadable to every other account on the host, and to
@@ -142,6 +150,17 @@ sudo chmod 600 .env
 chmod +x deploy.sh
 ```
 
+The replier keeps its mention cursor on the `hypb-state` volume, which compose
+treats as pre-existing. Create it once, owned by the image's uid, before the
+first deploy (the same commands appear in [§9.3](#93-install)):
+
+```bash
+sudo docker volume create hypb-state
+sudo docker run --rm -v hypb-state:/var/lib/hypb --user 0:0 \
+    --entrypoint chown ghcr.io/aviadlevy/hebrew-year-process-bot:<IMAGE_TAG> \
+    -R 10001:10001 /var/lib/hypb
+```
+
 Deploy:
 
 ```bash
@@ -211,70 +230,67 @@ The startup notice described in §4 arrives on every start, not only the first,
 so an unexpected one in Telegram means the container restarted.
 
 A climbing restart count is the signal that the replier is crash-looping.
-It is a trustworthy signal: a dropped stream no longer restarts the container.
+It is a trustworthy signal: a failed poll never restarts the container.
 
-**Dropped connections are expected and are handled in-process.**
-mastodon.social recycles long-lived SSE connections — in practice a few times
-a day — and the blocking `stream_user()` cannot recover from that on its own,
-because mastodon-py's reconnect loop only exists on its `run_async=True` path.
-`hypb/stream_supervisor.py` reconnects instead, so a recycle costs a second of
-downtime rather than a container restart, and it does not page anyone. In the
-log it looks like this, at WARNING, and nothing else happens:
+**The replier polls; it does not stream.** Every `POLL_INTERVAL_SECONDS` it asks
+Mastodon for mention notifications newer than its cursor, answers them oldest
+first, and moves the cursor after each one. The cursor lives in the same SQLite
+database as the progress post's state, on the `hypb-state` volume, so a restart
+resumes exactly where it stopped and a mention that arrived while the container
+was down is answered when it comes back — unless it is older than
+`MENTION_MAX_AGE_MINUTES`. That is why it replaced the streaming API:
+mastodon.social cuts every stream after ~15s and replays nothing, so a mention
+that arrived in the wrong second was lost for good.
 
-```
-mastodon stream ended (MastodonNetworkError('Server ceased communication.')); reconnecting in 1s
-```
+Each mention produces one Telegram message with the sender, the text, a link and
+an outcome: `replied`, `not replied (no keyword matched)`, `skipped, N min old`
+or `failed: …`.
 
-Reconnects back off 1s → 2s → 4s … capped at 60s. A stream that stayed up for
-5s had connected, so its drop resets the backoff: a server that cuts every
-stream after ~15s costs a second of downtime per cut, not a growing delay. A
-stream that stayed up for 60s counts as healthy and also ends the outage, so
-the five-minute alert below only fires if streams keep failing to stay up.
+**The first start has no cursor.** It records the newest existing mention
+without answering anything, so a deploy never re-answers history. The log says
+`no mention cursor yet; starting after notification id=N`.
 
 Exit codes and alerts distinguish what is left:
 
 - **Exit 2** — missing or invalid configuration. The log names every variable
-  that is unset. Check the env file.
+  that is unset or invalid. Check the env file.
 - **Exit 1, with a logged exception and a Telegram alert** — a failure the
-  supervisor deliberately will not retry: anything that is not a transport
-  error. A `MastodonMalformedEventError` (a parsing bug, as in the keepalive
-  bug), a rejected token, or a plain bug all land here. These *should* page,
-  and they crash-loop until fixed.
-- **A Telegram alert reading `mastodon stream down for Nm, still retrying`,
-  with no restart** — reconnects have been failing continuously for five
+  poller deliberately will not retry: anything that is not a transport error.
+  A rejected token or a plain bug lands here. These *should* page, and they
+  crash-loop until fixed.
+- **A Telegram alert reading `mastodon mention poll failing for Nm, still
+  retrying`, with no restart** — polls have been failing continuously for five
   minutes. The process is alive and still trying; this is the far end or the
   network being down, not the bot. Exactly one alert is sent per outage, and
-  recovery is logged at INFO (`mastodon stream recovered after Ns of failed
-  reconnects`) rather than alerted.
+  recovery is logged at INFO (`mention poll recovered after Ns of failures`)
+  rather than alerted.
+
+The request cost is two a minute at the default interval, about 0.7% of
+mastodon.social's limit of 300 requests per 5 minutes.
 
 ## 8. Known limitations
 
 **There is no healthcheck, deliberately.** The replier has no HTTP surface to
-probe, and its real failure mode is not a crashed process — it is a stream
-that stays open and looks healthy while silently delivering no mentions. A
-liveness probe cannot observe that at all, so adding one would manufacture
-confidence rather than reduce risk.
+probe, and a liveness probe cannot tell "no one is asking" from "something is
+wrong", so adding one would manufacture confidence rather than reduce risk.
 
-The consequence, stated plainly: **Telegram alerts fire on crashes and on
-sustained reconnect failures, not on a silently-stalled stream.** If the bot
-goes quiet while its connection still looks open, nothing in this stack will
-tell you. Periodically checking the logs for a recent mention being received
-and answered is currently the only way to notice.
+What does page you: crashes, and polls that fail continuously for five minutes.
+A bad token surfaces as exit 1 and an alert.
 
-**Mentions that arrive mid-reconnect are lost.** The streaming API has no
-replay and nothing backfills notifications after a reconnect, so anything
-posted during the gap is never seen. Reconnecting in-process shrinks that gap
-from a container restart to roughly a second for the common case, but does not
-close it.
+**A reply can take up to `POLL_INTERVAL_SECONDS`.** That is the price of not
+depending on a stream; the default of 30s is the longest anyone waits.
 
-**`read_only: true` is verified only through startup.** Python
-initialization, the `python-magic` import, loading certifi's CA bundle, and
-constructing the Mastodon client all complete fine on a read-only root
-filesystem. The long-lived streaming path — a different code path that runs
-for hours or days — has **not** been proven. Watch the first several hours of
-logs after a fresh deploy for `Read-only file system` errors. If one appears,
-the fix is a narrowly scoped named volume for that specific path, not
-removing `read_only`.
+**Mentions that were not answered are reported, not retried.** A reply that
+fails, or a mention older than `MENTION_MAX_AGE_MINUTES`, is sent to Telegram
+and the cursor moves past it, so one bad mention cannot block the ones behind
+it. A reply that was posted but whose cursor write was lost to a crash is not
+posted twice: each reply carries an idempotency key built from the notification
+id.
+
+**The replier writes to the `hypb-state` volume.** The root filesystem stays
+`read_only: true`; only `/var/lib/hypb` and `/tmp` are writable. If a deploy
+logs `Read-only file system` or `unable to open database file`, the volume is
+missing or not owned by uid 10001 — see §9.3 for creating it.
 
 ## 9. The daily progress post
 

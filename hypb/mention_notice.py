@@ -33,7 +33,7 @@ def _strip_html(content: str) -> str:
     return extractor.text
 
 
-def _truncate(text: str) -> str:
+def truncate(text: str) -> str:
     if len(text) <= MAX_NOTICE_TEXT_CHARS:
         return text
     return text[:MAX_NOTICE_TEXT_CHARS] + f"... [{len(text) - MAX_NOTICE_TEXT_CHARS} more chars]"
@@ -53,7 +53,7 @@ def build_mention_notice(notification, outcome: str) -> str:
         [
             "mastodon mention",
             f"from: {'@' + acct if acct else _UNKNOWN}",
-            f"text: {_truncate(_strip_html(status.get('content') or ''))}",
+            f"text: {truncate(_strip_html(status.get('content') or ''))}",
             f"outcome: {outcome}",
             f"link: {status.get('url') or _UNKNOWN}",
         ]

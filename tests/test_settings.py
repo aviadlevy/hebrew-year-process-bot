@@ -1,6 +1,11 @@
 import pytest
 
-from hypb.settings import ConfigurationError, missing_variables, require
+from hypb.settings import (
+    ConfigurationError,
+    missing_variables,
+    positive_number,
+    require,
+)
 
 REQUIRED = ("MASTODON_ACCESS_TOKEN", "MASTODON_BASE_URL")
 COMPLETE = {"MASTODON_ACCESS_TOKEN": "token", "MASTODON_BASE_URL": "https://mastodon.social"}
@@ -42,3 +47,20 @@ def test_require_raises_naming_the_missing_variables():
     message = str(excinfo.value)
     assert "MASTODON_ACCESS_TOKEN" in message
     assert "MASTODON_BASE_URL" in message
+
+
+@pytest.mark.parametrize("env", [{}, {"MENTION_MAX_AGE_MINUTES": ""}, {"MENTION_MAX_AGE_MINUTES": "  "}])
+def test_a_missing_or_blank_number_uses_the_default(env):
+    assert positive_number("MENTION_MAX_AGE_MINUTES", 30.0, env) == 30.0
+
+
+def test_a_number_is_read_from_the_environment():
+    assert positive_number("MENTION_MAX_AGE_MINUTES", 30.0, {"MENTION_MAX_AGE_MINUTES": "45"}) == 45.0
+    assert positive_number("POLL_INTERVAL_SECONDS", 30.0, {"POLL_INTERVAL_SECONDS": "7.5"}) == 7.5
+
+
+@pytest.mark.parametrize("bad", ["abc", "0", "-5", "nan", "inf"])
+def test_a_bad_number_is_a_configuration_error_naming_the_variable(bad):
+    """A typo here must stop the start, not quietly run with the wrong cutoff."""
+    with pytest.raises(ConfigurationError, match="MENTION_MAX_AGE_MINUTES"):
+        positive_number("MENTION_MAX_AGE_MINUTES", 30.0, {"MENTION_MAX_AGE_MINUTES": bad})
