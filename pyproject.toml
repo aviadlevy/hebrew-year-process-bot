@@ -12,7 +12,7 @@ dependencies = [
     "astral<3.0",
     "async-lru>=2.0.4,<3",
     "hdate>=1.2.1,<2",
-    "mastodon-py>=1.8.1,<1.9",
+    "mastodon-py>=2.2.2,<2.3",
     # Deliberately uncapped: pytz ships the IANA timezone database, and this bot
     # depends on current Asia/Jerusalem DST rules to compute the tzet hakochavim
     # boundary that decides which Hebrew date it reports. An upper bound here

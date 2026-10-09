@@ -29,26 +29,9 @@ class _StreamingListener(StreamListener):
         self.mastodon_client = mastodon_client
         self._notify = notify if notify is not None else send_alert
 
-    def _dispatch(self, event):
-        """Ignore empty events, so a server keepalive cannot kill the stream.
-
-        mastodon-py 1.8.1 has a bug in its SSE parsing: `_parse_line()` handles a
-        ':' comment line by calling `handle_heartbeat()` and returning the event
-        dict untouched — still empty. The blank line that terminates the comment
-        block then reaches `_dispatch({})`, which reads `event['event']` and
-        raises MastodonMalformedEventError.
-
-        Mastodon sends a keepalive roughly every 15 seconds, so without this
-        guard the replier cannot stay connected for longer than that.
-
-        Upstream fixed it the same way in 2.x, where `_dispatch` opens with
-        `if not event: return`. Backporting it here keeps us on the pinned 1.8.1
-        and makes this override a harmless no-op once that upgrade happens.
-        """
-        if not event:
-            return None
-        logger.debug("stream event: %s", event.get("event"))
-        return super()._dispatch(event)
+    def on_any_event(self, name, data=None, for_stream=None):
+        """Per-event proof of life at DEBUG, so LOG_LEVEL=DEBUG shows what the stream delivers."""
+        logger.debug("stream event: %s", name)
 
     def handle_heartbeat(self):
         """Proof the connection is alive, at DEBUG so it cannot flood the log."""
