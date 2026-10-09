@@ -1,35 +1,69 @@
-"""How a mention ended, with whatever detail the notice needs to show for it."""
+"""How a mention ended, and how each ending reads on its card.
+
+One class per outcome, each owning its own header detail and extra lines, so
+the card renders any outcome the same way instead of switching on which one it
+got.
+"""
 
 from dataclasses import dataclass
-from enum import Enum
+
+from hypb.alert_messages import error_line, format_traceback
+from hypb.telegram_message import quote
 
 
-class OutcomeKind(Enum):
-    REPLIED = "replied"
-    NO_KEYWORD = "no_keyword"
-    SKIPPED = "skipped"
-    FAILED = "failed"
+class MentionOutcome:
+    """The shared shape: an emoji and title for the header, then outcome-specific detail."""
+
+    emoji: str
+    title: str
+
+    def detail(self, status) -> str | None:
+        """Shown after the title; by default, who could see the toot."""
+        return status.get("visibility")
+
+    def lines(self) -> list[str]:
+        """HTML lines that follow the question."""
+        return []
+
+    def details(self) -> str | None:
+        """Raw text for the card's collapsed quote."""
+        return None
 
 
 @dataclass(frozen=True)
-class MentionOutcome:
-    kind: OutcomeKind
-    reply_text: str | None = None
-    age_minutes: int | None = None
-    error: BaseException | None = None
+class Replied(MentionOutcome):
+    reply_text: str
+    emoji = "✅"
+    title = "Replied"
 
-    @classmethod
-    def replied(cls, reply_text: str) -> MentionOutcome:
-        return cls(OutcomeKind.REPLIED, reply_text=reply_text)
+    def lines(self) -> list[str]:
+        return [quote(f"🤖 {self.reply_text}")]
 
-    @classmethod
-    def no_keyword(cls) -> MentionOutcome:
-        return cls(OutcomeKind.NO_KEYWORD)
 
-    @classmethod
-    def skipped(cls, age_minutes: int) -> MentionOutcome:
-        return cls(OutcomeKind.SKIPPED, age_minutes=age_minutes)
+@dataclass(frozen=True)
+class NoKeyword(MentionOutcome):
+    emoji = "💤"
+    title = "No keyword matched"
 
-    @classmethod
-    def failed(cls, error: BaseException) -> MentionOutcome:
-        return cls(OutcomeKind.FAILED, error=error)
+
+@dataclass(frozen=True)
+class Skipped(MentionOutcome):
+    age_minutes: int
+    emoji = "⏭"
+    title = "Skipped"
+
+    def detail(self, status) -> str | None:
+        return f"{self.age_minutes} min old"
+
+
+@dataclass(frozen=True)
+class Failed(MentionOutcome):
+    error: BaseException
+    emoji = "❌"
+    title = "Reply failed"
+
+    def lines(self) -> list[str]:
+        return [error_line(self.error)]
+
+    def details(self) -> str | None:
+        return format_traceback(self.error)

@@ -1,38 +1,31 @@
 """Alerts: a title you can read at a glance, the error, and the traceback folded away.
 
 The traceback is what a human needs to debug, but it is noise in a chat, so it
-goes in a collapsed quote. It is also the only part that can grow without
-bound, so it is the part that gets trimmed to keep the alert under Telegram's
-limit -- from the front, because the end of a traceback is where the failure is.
+travels as the message's collapsed details, which give way first when the
+message would not fit.
 """
 
 import traceback
 
-from hypb.telegram_message import TelegramMessage, bold, code, expandable_quote
-from hypb.text import keep_end, truncate
+from hypb.telegram_message import TelegramMessage, bold, code
+from hypb.text import truncate
 
-#: Room left for the title and the error line out of Telegram's 4096.
-MAX_TRACEBACK_CHARS = 3000
-
-MAX_ERROR_CHARS = 500
+#: The error line is a headline; the full text is at the end of the traceback anyway.
+MAX_ERROR_CHARS = 150
 
 
 def format_traceback(error: BaseException) -> str:
     return "".join(traceback.format_exception(error)).rstrip()
 
 
+def error_line(error: BaseException) -> str:
+    """The exception as one short monospace line, shared by alerts and failed-mention cards."""
+    return code(truncate(repr(error), MAX_ERROR_CHARS))
+
+
 def error_alert(title: str, error: BaseException) -> TelegramMessage:
-    return TelegramMessage(
-        "\n".join(
-            [
-                f"🚨 {bold(title)}",
-                code(truncate(repr(error), MAX_ERROR_CHARS)),
-                expandable_quote(keep_end(format_traceback(error), MAX_TRACEBACK_CHARS)),
-            ]
-        )
-    )
+    return TelegramMessage(f"🚨 {bold(title)}\n{error_line(error)}", details=format_traceback(error))
 
 
 def warning_alert(title: str, detail: str) -> TelegramMessage:
     return TelegramMessage(f"⚠️ {bold(title)}\n{code(truncate(detail, MAX_ERROR_CHARS))}")
-

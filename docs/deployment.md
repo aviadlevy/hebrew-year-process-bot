@@ -186,7 +186,10 @@ this document that says "you will be paged" is false. The log says which half
 failed: `telegram rejected the alert: HTTP 400 ...` means the credentials
 reached Telegram and were refused — a wrong `TELEGRAM_CHAT_ID` reads
 `chat not found`, a wrong `TELEGRAM_TOKEN` reads `Unauthorized` — while
-`telegram alert could not be sent` means the request never got there. The bot
+`telegram alert could not be sent` means the request never got there. A wrong
+chat id is a 400, the same status as a message Telegram could not parse, so it
+is logged twice, around `resending as plain text`; that retry is expected and
+fails the same way. The bot
 token is redacted from both. A failed notice is logged, not fatal: answering
 mentions matters more than being able to page anyone.
 
@@ -239,17 +242,19 @@ was down is answered when it comes back — unless it is older than
 mastodon.social cuts every stream after ~15s and replays nothing, so a mention
 that arrived in the wrong second was lost for good.
 
-Each mention produces one Telegram card: the outcome, the sender, the question,
-and an **Open on Mastodon** button. The outcomes are ✅ **Replied** (with the
-answer the bot sent), 💤 **No keyword matched**, ⏭ **Skipped** (with how old the
-mention was) and ❌ **Reply failed** (with the error and a collapsed traceback).
+Each mention produces one Telegram card: the outcome, the sender, the question
+(without the handles it opens with), and an **Open on Mastodon** button. The
+outcomes are ✅ **Replied** (with the bot's answer quoted under the question),
+💤 **No keyword matched**, ⏭ **Skipped** (with how old the mention was) and
+❌ **Reply failed** (with the error and a collapsed traceback).
 
 **Telegram messages are formatted HTML.** Everything taken from outside — toot
-text, usernames, errors, tracebacks — is escaped, and a traceback is trimmed to
-its last 3000 characters so an alert fits Telegram's 4096-character limit. If
-Telegram still rejects a message as a bad request, it is resent once as plain
-text and the log says `telegram rejected the formatted alert; resending as plain
-text`.
+text, usernames, errors, tracebacks — is escaped. Telegram rejects anything
+over 4096 UTF-16 units, so a message trims its collapsed traceback from the
+front until it fits, keeping the last lines that name the failure. If Telegram
+still rejects a message as a bad request, it is resent once as plain text,
+without the button and with the link written out, and the log says
+`telegram rejected the formatted alert; resending as plain text`.
 
 **The first start has no cursor.** It records the newest existing mention
 without answering anything, so a deploy never re-answers history. The log says

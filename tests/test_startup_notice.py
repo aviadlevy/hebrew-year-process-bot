@@ -36,7 +36,7 @@ def test_startup_message_identifies_the_running_deploy():
 
     assert message.html.splitlines() == [
         "🟢 <b>Replier started</b> · v4.0.0",
-        "<i>mastodon.social · host hypb-mastodon-replier · 2026-08-18 09:30 UTC</i>",
+        "<code>mastodon.social</code> · <i>host hypb-mastodon-replier · 2026-08-18 09:30 UTC</i>",
     ]
 
 
@@ -61,8 +61,15 @@ def test_startup_message_falls_back_when_metadata_is_absent():
 
     assert message.html.splitlines() == [
         "🟢 <b>Replier started</b> · unknown version",
-        "<i>unknown instance · host laptop · 2026-08-18 09:30 UTC</i>",
+        "<code>unknown instance</code> · <i>host laptop · 2026-08-18 09:30 UTC</i>",
     ]
+
+
+def test_a_base_url_without_a_scheme_is_shown_as_given():
+    """Mastodon.py accepts `mastodon.social` alone; the notice must not call that unknown."""
+    message = build_startup_message(env={"MASTODON_BASE_URL": "mastodon.social"}, now=datetime(2026, 8, 18, 9, 30, 0, tzinfo=UTC), hostname="h")
+
+    assert "<code>mastodon.social</code>" in message.html
 
 
 def test_main_announces_itself_before_it_starts_polling(monkeypatch, mocker):
@@ -177,3 +184,15 @@ def test_a_rejection_that_is_not_a_bad_request_is_not_retried(mocker):
 
     assert send_alert(TelegramMessage("hi")) is False
     assert post.call_count == 1
+
+
+def test_a_wrong_chat_id_is_tried_twice_and_reported_as_undelivered(mocker, caplog):
+    """Telegram answers a wrong chat id with 400 too, so it is indistinguishable from bad markup."""
+    rejected = mocker.MagicMock(ok=False, status_code=400, text='{"ok":false,"description":"Bad Request: chat not found"}')
+    post = mocker.patch("hypb.utils.requests.post", return_value=rejected)
+
+    with caplog.at_level(logging.ERROR):
+        assert send_alert(TelegramMessage("hi")) is False
+
+    assert post.call_count == 2
+    assert caplog.text.count("chat not found") == 2

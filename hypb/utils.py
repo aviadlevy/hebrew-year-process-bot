@@ -1,5 +1,6 @@
 import logging
 import os
+from dataclasses import dataclass
 from http import HTTPStatus
 
 import aiohttp
@@ -29,48 +30,61 @@ def redact(text: str) -> str:
     return text
 
 
-async def _post_async(session: aiohttp.ClientSession, payload: dict) -> tuple[bool, int | None]:
+@dataclass(frozen=True)
+class _Delivery:
+    delivered: bool
+    status: int | None = None
+
+
+def _worth_resending_as_plain(delivery: _Delivery) -> bool:
+    """A 400 means Telegram could not take the message as written.
+
+    Usually that is markup it could not parse or a button URL it refused, which
+    the plain version does not have. A wrong chat id is also a 400, so it is
+    tried twice and fails both times; anything else (a wrong token is 401) would
+    fail the plain version just the same and is not retried.
+    """
+    return not delivery.delivered and delivery.status == HTTPStatus.BAD_REQUEST
+
+
+async def _post_async(session: aiohttp.ClientSession, payload: dict) -> _Delivery:
     async with session.post(TELEGRAM_API_URL, json=payload) as response:
         if not response.ok:
             logger.error("telegram rejected the alert: HTTP %s %s", response.status, redact(await response.text()))
-            return False, response.status
-    return True, response.status
+            return _Delivery(False, response.status)
+    return _Delivery(True, response.status)
 
 
 async def send_async_alert(message: TelegramMessage) -> bool:
     """Send a Telegram message, reporting whether Telegram accepted it.
 
-    The async twin of send_alert, and hardened for the same reason: a wrong
-    token or chat id is answered with 4xx and `ok: false` rather than a
-    transport error, so the previous fire-and-forget post could not tell a
-    working alerting path from a broken one.
+    The async twin of send_alert, with the same plain-text resend.
     """
     timeout = aiohttp.ClientTimeout(total=TELEGRAM_TIMEOUT_SECONDS)
     try:
         async with aiohttp.ClientSession(timeout=timeout) as session:
-            delivered, status = await _post_async(session, message.payload(CHAT_ID))
-            if delivered or status != HTTPStatus.BAD_REQUEST:
-                return delivered
-            logger.warning("telegram rejected the formatted alert; resending as plain text")
-            delivered, _ = await _post_async(session, message.plain_payload(CHAT_ID))
-            return delivered
+            delivery = await _post_async(session, message.payload(CHAT_ID))
+            if _worth_resending_as_plain(delivery):
+                logger.warning("telegram rejected the formatted alert; resending as plain text")
+                delivery = await _post_async(session, message.plain_payload(CHAT_ID))
+            return delivery.delivered
     except (aiohttp.ClientError, TimeoutError) as e:
         logger.error("telegram alert could not be sent: %s", redact(repr(e)))
         return False
 
 
-def _post(payload: dict) -> tuple[bool, int | None]:
+def _post(payload: dict) -> _Delivery:
     try:
         response = requests.post(TELEGRAM_API_URL, json=payload, timeout=TELEGRAM_TIMEOUT_SECONDS)
     except requests.RequestException as e:
         logger.error("telegram alert could not be sent: %s", redact(repr(e)))
-        return False, None
+        return _Delivery(False)
 
     if not response.ok:
         logger.error("telegram rejected the alert: HTTP %s %s", response.status_code, redact(response.text))
-        return False, response.status_code
+        return _Delivery(False, response.status_code)
 
-    return True, response.status_code
+    return _Delivery(True, response.status_code)
 
 
 def send_alert(message: TelegramMessage) -> bool:
@@ -82,14 +96,11 @@ def send_alert(message: TelegramMessage) -> bool:
     worst possible failure for the only channel this bot has to say anything is
     wrong.
 
-    A 400 means Telegram could not take the message as written -- markup it
-    could not parse, or text over its limit -- so the message is resent once as
-    plain text. Formatting must never be the reason an alert is lost. Any other
-    rejection (a wrong token or chat id) would fail the plain version too.
+    A message Telegram cannot take as written is resent once as plain text, so
+    formatting is never the reason an alert is lost.
     """
-    delivered, status = _post(message.payload(CHAT_ID))
-    if delivered or status != HTTPStatus.BAD_REQUEST:
-        return delivered
-    logger.warning("telegram rejected the formatted alert; resending as plain text")
-    delivered, _ = _post(message.plain_payload(CHAT_ID))
-    return delivered
+    delivery = _post(message.payload(CHAT_ID))
+    if _worth_resending_as_plain(delivery):
+        logger.warning("telegram rejected the formatted alert; resending as plain text")
+        delivery = _post(message.plain_payload(CHAT_ID))
+    return delivery.delivered

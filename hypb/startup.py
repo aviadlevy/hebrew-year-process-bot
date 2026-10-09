@@ -14,7 +14,7 @@ from collections.abc import Mapping
 from datetime import datetime
 from urllib.parse import urlparse
 
-from hypb.telegram_message import TelegramMessage, bold, escape, italic
+from hypb.telegram_message import TelegramMessage, bold, code, escape, italic
 
 
 def build_startup_message(
@@ -33,6 +33,14 @@ def build_startup_message(
     hostname = socket.gethostname() if hostname is None else hostname
 
     version = env.get("IMAGE_TAG") or "unknown version"
-    instance = urlparse(env.get("MASTODON_BASE_URL") or "").netloc or "unknown instance"
-    details = f"{instance} · host {hostname} · {now.strftime('%Y-%m-%d %H:%M %Z')}"
-    return TelegramMessage(f"🟢 {bold('Replier started')} · {escape(version)}\n{italic(details)}")
+    # Monospace, so Telegram does not turn the domain into a link.
+    instance = code(_instance(env.get("MASTODON_BASE_URL")))
+    when = now.strftime("%Y-%m-%d %H:%M %Z")
+    return TelegramMessage(f"🟢 {bold('Replier started')} · {escape(version)}\n{instance} · {italic(f'host {hostname} · {when}')}")
+
+
+def _instance(base_url: str | None) -> str:
+    """The instance's host; the value as given when it has no scheme, which Mastodon.py also accepts."""
+    if not base_url:
+        return "unknown instance"
+    return urlparse(base_url).netloc or base_url

@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 from mastodon import Mastodon
 
 from hypb.mention_notice import build_mention_notice
-from hypb.mention_outcome import MentionOutcome
+from hypb.mention_outcome import Failed, MentionOutcome, NoKeyword, Replied, Skipped
 from hypb.telegram_message import TelegramMessage
 from hypb.text import truncate
 from hypb.tweet_helper import get_text_to_reply
@@ -73,13 +73,13 @@ class MentionHandler:
         age = self._now() - notification["created_at"]
         if age > self._max_age:
             logger.info("mention id=%s is too old (%s); not replying", notification.get("id"), age)
-            return MentionOutcome.skipped(age_minutes=int(age.total_seconds() // 60))
+            return Skipped(age_minutes=int(age.total_seconds() // 60))
 
         try:
             reply = get_text_to_reply(content.lower())
             if not reply:
                 logger.info("no keyword matched in status_id=%s; not replying", status.get("id"))
-                return MentionOutcome.no_keyword()
+                return NoKeyword()
             logger.info("replying to status_id=%s with %r", status.get("id"), truncate(reply, MAX_LOGGED_CHARS))
             posted = self._client.status_reply(
                 to_status=notification["status"],
@@ -88,7 +88,7 @@ class MentionHandler:
             )
         except Exception as e:
             logger.exception("failed to handle mention id=%s status_id=%s", notification.get("id"), status.get("id"))
-            return MentionOutcome.failed(e)
+            return Failed(e)
 
         logger.info("replied to status_id=%s; reply status_id=%s", status.get("id"), (posted or {}).get("id"))
-        return MentionOutcome.replied(reply)
+        return Replied(reply)
