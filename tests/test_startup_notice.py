@@ -14,7 +14,10 @@ import requests
 from hypb.reply_on_mention_mastodon import main
 from hypb.settings import REQUIRED_REPLIER_VARS
 from hypb.startup import build_startup_message
+from hypb.telegram_message import TelegramMessage
 from hypb.utils import send_alert
+
+HELLO = TelegramMessage("hello")
 
 FAKE_TOKEN = "123456:fake-bot-token"
 
@@ -31,11 +34,10 @@ def test_startup_message_identifies_the_running_deploy():
         hostname="hypb-mastodon-replier",
     )
 
-    assert "hypb mastodon replier started" in message
-    assert "version: v4.0.0" in message
-    assert "instance: https://mastodon.social" in message
-    assert "host: hypb-mastodon-replier" in message
-    assert "2026-08-18 09:30:00" in message
+    assert message.html.splitlines() == [
+        "🟢 <b>Replier started</b> · v4.0.0",
+        "<code>mastodon.social</code> · <i>host hypb-mastodon-replier · 2026-08-18 09:30 UTC</i>",
+    ]
 
 
 def test_startup_message_never_carries_credentials():
@@ -49,16 +51,25 @@ def test_startup_message_never_carries_credentials():
 
     message = build_startup_message(env=env, now=datetime.now(UTC), hostname="host")
 
-    assert "mastodon-secret" not in message
-    assert FAKE_TOKEN not in message
+    assert "mastodon-secret" not in message.html
+    assert FAKE_TOKEN not in message.html
 
 
 def test_startup_message_falls_back_when_metadata_is_absent():
     """A locally-run replier has no IMAGE_TAG; that must not crash the start."""
-    message = build_startup_message(env={}, now=datetime.now(UTC), hostname="laptop")
+    message = build_startup_message(env={}, now=datetime(2026, 8, 18, 9, 30, 0, tzinfo=UTC), hostname="laptop")
 
-    assert "version: unknown" in message
-    assert "instance: unknown" in message
+    assert message.html.splitlines() == [
+        "🟢 <b>Replier started</b> · unknown version",
+        "<code>unknown instance</code> · <i>host laptop · 2026-08-18 09:30 UTC</i>",
+    ]
+
+
+def test_a_base_url_without_a_scheme_is_shown_as_given():
+    """Mastodon.py accepts `mastodon.social` alone; the notice must not call that unknown."""
+    message = build_startup_message(env={"MASTODON_BASE_URL": "mastodon.social"}, now=datetime(2026, 8, 18, 9, 30, 0, tzinfo=UTC), hostname="h")
+
+    assert "<code>mastodon.social</code>" in message.html
 
 
 def test_main_announces_itself_before_it_starts_polling(monkeypatch, mocker):
@@ -103,7 +114,7 @@ def test_send_alert_reports_a_rejection_instead_of_swallowing_it(mocker, caplog)
     mocker.patch("hypb.utils.requests.post", return_value=response)
 
     with caplog.at_level(logging.ERROR):
-        assert send_alert("hello") is False
+        assert send_alert(HELLO) is False
 
     assert "chat not found" in caplog.text
 
@@ -111,7 +122,7 @@ def test_send_alert_reports_a_rejection_instead_of_swallowing_it(mocker, caplog)
 def test_send_alert_confirms_a_delivered_message(mocker):
     mocker.patch("hypb.utils.requests.post", return_value=mocker.MagicMock(ok=True, status_code=200))
 
-    assert send_alert("hello") is True
+    assert send_alert(HELLO) is True
 
 
 def test_send_alert_never_logs_the_bot_token(monkeypatch, mocker, caplog):
@@ -128,7 +139,7 @@ def test_send_alert_never_logs_the_bot_token(monkeypatch, mocker, caplog):
     )
 
     with caplog.at_level(logging.ERROR):
-        assert send_alert("hello") is False
+        assert send_alert(HELLO) is False
 
     assert FAKE_TOKEN not in caplog.text, "the bot token leaked into the log"
     assert "***" in caplog.text
@@ -138,6 +149,50 @@ def test_send_alert_cannot_hang_the_replier(mocker):
     """An unbounded post would block the stream indefinitely on a stalled API."""
     post = mocker.patch("hypb.utils.requests.post", return_value=mocker.MagicMock(ok=True))
 
-    send_alert("hello")
+    send_alert(HELLO)
 
     assert post.call_args.kwargs["timeout"] > 0
+
+
+def test_send_alert_sends_the_message_as_html(mocker):
+    post = mocker.patch("hypb.utils.requests.post", return_value=mocker.MagicMock(ok=True, status_code=200))
+
+    send_alert(TelegramMessage("<b>hi</b>"))
+
+    assert post.call_args.kwargs["json"]["parse_mode"] == "HTML"
+    assert post.call_args.kwargs["json"]["text"] == "<b>hi</b>"
+
+
+def test_a_message_rejected_as_bad_request_is_resent_as_plain_text(mocker, caplog):
+    """Formatting must never be the reason an alert is lost."""
+    rejected = mocker.MagicMock(ok=False, status_code=400, text='{"ok":false,"description":"can\'t parse entities"}')
+    delivered = mocker.MagicMock(ok=True, status_code=200)
+    post = mocker.patch("hypb.utils.requests.post", side_effect=[rejected, delivered])
+
+    with caplog.at_level(logging.WARNING):
+        assert send_alert(TelegramMessage("<b>hi</b>")) is True
+
+    assert post.call_count == 2
+    assert "parse_mode" not in post.call_args.kwargs["json"]
+    assert post.call_args.kwargs["json"]["text"] == "hi"
+    assert "resending as plain text" in caplog.text
+
+
+def test_a_rejection_that_is_not_a_bad_request_is_not_retried(mocker):
+    """A wrong token or chat id fails the plain version just the same; one attempt is enough."""
+    post = mocker.patch("hypb.utils.requests.post", return_value=mocker.MagicMock(ok=False, status_code=403, text="forbidden"))
+
+    assert send_alert(TelegramMessage("hi")) is False
+    assert post.call_count == 1
+
+
+def test_a_wrong_chat_id_is_tried_twice_and_reported_as_undelivered(mocker, caplog):
+    """Telegram answers a wrong chat id with 400 too, so it is indistinguishable from bad markup."""
+    rejected = mocker.MagicMock(ok=False, status_code=400, text='{"ok":false,"description":"Bad Request: chat not found"}')
+    post = mocker.patch("hypb.utils.requests.post", return_value=rejected)
+
+    with caplog.at_level(logging.ERROR):
+        assert send_alert(TelegramMessage("hi")) is False
+
+    assert post.call_count == 2
+    assert caplog.text.count("chat not found") == 2

@@ -1,9 +1,9 @@
 import logging
 import os
 import sys
-import traceback
 from datetime import timedelta
 
+from hypb.alert_messages import error_alert
 from hypb.config import get_mastodon_client
 from hypb.mention_cursor import MentionCursor
 from hypb.mention_feed import MentionFeed
@@ -81,7 +81,7 @@ def main() -> int:
         reply(max_age, poll_interval_seconds)
     except Exception as e:
         logger.exception("replier stopped")
-        send_alert("exception: " + repr(e) + "\n" + traceback.format_exc())
+        send_alert(error_alert("Replier crashed", e))
         return 1
     return 1
 

@@ -60,3 +60,18 @@ async def test_parashah_heb(mocker):
 async def test_unsupported_command(mocker):
     spy, _ = await base_flow(mocker, "What's up dude?", 1234, 4567)
     spy.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_a_failed_reply_is_alerted_not_raised(mocker):
+    """The stream must survive one bad reply, and someone must hear about it."""
+    async_client: AsyncClient = AsyncClient()
+    mocker.patch.object(async_client, "create_tweet", side_effect=RuntimeError("twitter down"))
+    alert = mocker.patch("hypb.async_stream_client_twitter.send_async_alert", new=mocker.AsyncMock())
+    stream_client = _AsyncStreamingClient(async_client, 1234, bearer_token="token")
+
+    await stream_client.on_tweet(create_tweet("What's the date?", 1, 4567))
+
+    message = alert.await_args.args[0]
+    assert message.html.startswith("🚨 <b>Twitter reply failed</b>")
+    assert "twitter down" in message.html

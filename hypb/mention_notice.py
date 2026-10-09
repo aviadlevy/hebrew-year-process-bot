@@ -1,16 +1,40 @@
-"""The Telegram notice sent for every mention the replier receives.
+"""The Telegram card sent for every mention the replier receives.
 
 The replier's logs say what it did, but nobody tails `docker logs` to learn that
-someone asked it something. A message per mention puts the question, and what the
+someone asked it something. A card per mention puts the question, and what the
 bot made of it, in front of the person who runs the bot.
 """
 
+import re
 from html.parser import HTMLParser
 
-#: Toot bodies are arbitrary user input; a long one would bury the rest of the notice.
+from hypb.mention_outcome import MentionOutcome
+from hypb.telegram_message import (
+    LinkButton,
+    TelegramMessage,
+    bold,
+    escape,
+    is_web_url,
+    italic,
+    link,
+    quote,
+)
+from hypb.text import truncate
+
+#: Toot bodies are arbitrary user input; a long one would bury the rest of the card.
 MAX_NOTICE_TEXT_CHARS = 500
 
+#: Account names come from remote servers; keep the sender line to one line.
+MAX_ACCT_CHARS = 100
+
 _UNKNOWN = "unknown"
+
+#: The handles a toot opens with -- always the bot's own, sometimes a thread's.
+_LEADING_MENTIONS = re.compile(r"^(?:@\S+\s+)+")
+
+
+#: Tags that separate words even when no space is written around them.
+_BREAKING_TAGS = {"br", "p"}
 
 
 class _TextExtractor(HTMLParser):
@@ -20,6 +44,14 @@ class _TextExtractor(HTMLParser):
 
     def handle_data(self, data):
         self._chunks.append(data)
+
+    def handle_starttag(self, tag, attrs):
+        if tag in _BREAKING_TAGS:
+            self._chunks.append(" ")
+
+    def handle_endtag(self, tag):
+        if tag in _BREAKING_TAGS:
+            self._chunks.append(" ")
 
     @property
     def text(self) -> str:
@@ -33,28 +65,33 @@ def _strip_html(content: str) -> str:
     return extractor.text
 
 
-def truncate(text: str) -> str:
-    if len(text) <= MAX_NOTICE_TEXT_CHARS:
-        return text
-    return text[:MAX_NOTICE_TEXT_CHARS] + f"... [{len(text) - MAX_NOTICE_TEXT_CHARS} more chars]"
+def _question(content: str) -> str:
+    """The toot's text without the handles it opens with, unless that is all it has."""
+    text = _strip_html(content)
+    return _LEADING_MENTIONS.sub("", text) or text
 
 
-def build_mention_notice(notification, outcome: str) -> str:
-    """Describe one mention and what the replier did about it.
+def _header(status, outcome: MentionOutcome) -> str:
+    header = f"{outcome.emoji} {bold(outcome.title)}"
+    detail = outcome.detail(status)
+    return f"{header} · {escape(detail)}" if detail else header
 
-    `outcome` is a short human-readable line supplied by the caller, because only
-    the caller knows whether it replied, stayed silent or failed.
-    """
+
+def _sender(account) -> str:
+    acct = account.get("acct")
+    if not acct:
+        return f"👤 {_UNKNOWN}"
+    return f"👤 {link('@' + truncate(acct, MAX_ACCT_CHARS), account.get('url'))}"
+
+
+def build_mention_notice(notification, outcome: MentionOutcome) -> TelegramMessage:
+    """One card per mention: outcome, sender, the question, then what the bot did."""
     status = notification.get("status") or {}
     account = notification.get("account") or {}
-    acct = account.get("acct")
+    question = truncate(_question(status.get("content") or ""), MAX_NOTICE_TEXT_CHARS)
 
-    return "\n".join(
-        [
-            "mastodon mention",
-            f"from: {'@' + acct if acct else _UNKNOWN}",
-            f"text: {truncate(_strip_html(status.get('content') or ''))}",
-            f"outcome: {outcome}",
-            f"link: {status.get('url') or _UNKNOWN}",
-        ]
-    )
+    question_line = quote(question) if question else italic("(no text)")
+    lines = [_header(status, outcome), _sender(account), question_line, *outcome.lines()]
+    url = status.get("url")
+    button = LinkButton("Open on Mastodon ↗", url) if is_web_url(url) else None
+    return TelegramMessage("\n".join(lines), details=outcome.details(), button=button)
