@@ -1,8 +1,8 @@
 import asyncio
 import logging
 import sys
-import traceback
 
+from hypb.alert_messages import error_alert
 from hypb.config import get_async_twitter_client, get_mastodon_client, run_in_executor
 from hypb.constant import (
     EMPTY_SYMBOL,
@@ -12,6 +12,7 @@ from hypb.constant import (
 )
 from hypb.dates_helper import get_current_state
 from hypb.progress_bar import ProgressBar
+from hypb.progress_notice import build_progress_summary
 from hypb.settings import REQUIRED_PROGRESS_VARS, ConfigurationError, require
 from hypb.state_store import MASTODON, PLATFORMS, TWITTER, StateStore
 from hypb.tweet_helper import get_last_state, should_tweet
@@ -77,7 +78,7 @@ async def _publish(platform, poster, progress_bar):
         await poster(progress_bar)
     except Exception as e:
         logger.exception("posting to %s failed", platform)
-        await send_async_alert(f"posting to {platform} failed: " + repr(e) + "\n" + traceback.format_exc())
+        await send_async_alert(error_alert(f"Posting to {platform.capitalize()} failed", e))
         return False
     return True
 
@@ -104,7 +105,7 @@ async def tweet():
             seed = await _seed_from_timeline(mastodon_client)
         except Exception as e:
             logger.exception("could not seed from the mastodon timeline; aborting without writing state")
-            await send_async_alert("could not seed from the mastodon timeline: " + repr(e) + "\n" + traceback.format_exc())
+            await send_async_alert(error_alert("Could not seed from the Mastodon timeline", e))
             return 1
 
     outcomes = {}
@@ -142,7 +143,7 @@ async def tweet():
 
     summary = ", ".join(f"{platform}: {outcome}" for platform, outcome in outcomes.items())
     logger.info("current state -> %s. %s", current_state, summary)
-    await send_async_alert(f"current state -> {current_state}. {summary}")
+    await send_async_alert(build_progress_summary(current_state, get_progress_bar(current_state), outcomes))
     return 1 if "failed" in outcomes.values() else 0
 
 
@@ -168,7 +169,7 @@ def main() -> int:
         logger.exception("tweet_progress failed")
         # The loop asyncio.run() used has already closed, so a fresh one is
         # spun up just to send the alert.
-        asyncio.run(send_async_alert("tweet_progress failed: " + repr(e) + "\n" + traceback.format_exc()))
+        asyncio.run(send_async_alert(error_alert("Progress job crashed", e)))
         return 1
 
 

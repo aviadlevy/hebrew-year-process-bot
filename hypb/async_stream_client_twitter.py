@@ -1,8 +1,7 @@
-import traceback
-
 from tweepy import Tweet
 from tweepy.asynchronous import AsyncClient, AsyncStreamingClient
 
+from hypb.alert_messages import error_alert
 from hypb.tweet_helper import get_text_to_reply
 from hypb.utils import send_async_alert
 
@@ -23,7 +22,7 @@ class _AsyncStreamingClient(AsyncStreamingClient):
             if reply:
                 return await self.reply_to_tweet(tweet, reply)
         except Exception as e:
-            await send_async_alert("exception: " + repr(e) + "\n" + traceback.format_exc())
+            await send_async_alert(error_alert("Twitter reply failed", e))
 
     async def reply_to_tweet(self, tweet: Tweet, message: str):
         return await self.async_client.create_tweet(in_reply_to_tweet_id=tweet.id, text=message)

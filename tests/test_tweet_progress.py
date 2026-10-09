@@ -255,3 +255,27 @@ def test_main_returns_1_and_alerts_when_tweet_raises(monkeypatch, mocker):
 
     assert main() == 1
     assert send_async_alert.called
+
+
+@pytest.mark.asyncio
+async def test_a_run_reports_its_summary_card(store, clients, mocker):
+    alert = mocker.patch("hypb.tweet_progress.send_async_alert", new=mocker.AsyncMock())
+
+    await tweet()
+
+    summary = alert.await_args.args[0]
+    assert summary.html.startswith("📊 <b>Year progress · 50%</b>")
+    assert "Mastodon ✅ posted · Twitter ✅ posted" in summary.html
+
+
+@pytest.mark.asyncio
+async def test_a_failed_platform_alert_names_the_platform(store, clients, mocker):
+    alert = mocker.patch("hypb.tweet_progress.send_async_alert", new=mocker.AsyncMock())
+    _, twitter_client = clients
+    twitter_client.create_tweet.side_effect = RuntimeError("twitter down")
+
+    await tweet()
+
+    first_alert = alert.await_args_list[0].args[0]
+    assert first_alert.html.startswith("🚨 <b>Posting to Twitter failed</b>")
+    assert "twitter down" in first_alert.html

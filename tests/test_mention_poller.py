@@ -83,7 +83,8 @@ def test_a_sustained_outage_alerts_exactly_once():
     run_until_exhausted(poller)
 
     assert alert.call_count == 1
-    assert "MastodonNetworkError" in alert.call_args.args[0]
+    assert "Mention polling failing" in alert.call_args.args[0].html
+    assert "MastodonNetworkError" in alert.call_args.args[0].html
 
 
 def test_the_alert_rearms_after_a_recovery():

@@ -45,7 +45,7 @@ def test_a_matching_mention_is_answered_and_reported():
     client.status_reply.assert_called_once()
     assert client.status_reply.call_args.kwargs["to_status"] is notification["status"]
     notify.assert_called_once()
-    assert "outcome: replied" in notify.call_args.args[0]
+    assert "✅ <b>Replied</b>" in notify.call_args.args[0].html
 
 
 def test_the_reply_carries_an_idempotency_key_from_the_notification_id():
@@ -67,7 +67,7 @@ def test_a_mention_with_no_keyword_is_left_alone_but_still_reported():
     handler.handle(mention("What's up dude?"))
 
     client.status_reply.assert_not_called()
-    assert "outcome: not replied (no keyword matched)" in notify.call_args.args[0]
+    assert "💤 <b>No keyword matched</b>" in notify.call_args.args[0].html
 
 
 def test_a_mention_older_than_the_limit_is_skipped_and_reported():
@@ -77,7 +77,7 @@ def test_a_mention_older_than_the_limit_is_skipped_and_reported():
     handler.handle(mention(age=MAX_AGE + timedelta(minutes=1)))
 
     client.status_reply.assert_not_called()
-    assert "outcome: skipped, 31 min old" in notify.call_args.args[0]
+    assert "⏭ <b>Skipped</b> · 31 min old" in notify.call_args.args[0].html
 
 
 def test_a_mention_exactly_at_the_limit_is_still_answered():
@@ -88,16 +88,19 @@ def test_a_mention_exactly_at_the_limit_is_still_answered():
     client.status_reply.assert_called_once()
 
 
-def test_a_failed_reply_is_alerted_and_reported_without_raising():
+def test_a_failed_reply_is_reported_once_with_its_traceback_without_raising():
+    """One card, not a card plus a separate exception alert, for one failed mention."""
     client = MagicMock()
     client.status_reply.side_effect = RuntimeError("boom")
     handler, _, notify = build(client)
 
     handler.handle(mention())
 
-    messages = [call.args[0] for call in notify.call_args_list]
-    assert any(m.startswith("exception: RuntimeError('boom')") and "Traceback" in m for m in messages)
-    assert any("outcome: failed: RuntimeError('boom')" in m for m in messages)
+    notify.assert_called_once()
+    card = notify.call_args.args[0].html
+    assert "❌ <b>Reply failed</b>" in card
+    assert "RuntimeError(&#x27;boom&#x27;)" in card
+    assert "<blockquote expandable>Traceback" in card
 
 
 def test_a_notifier_that_reports_failure_does_not_undo_the_reply():
@@ -178,4 +181,4 @@ def test_a_real_mastodon_py_notification_is_handled():
     handler.handle(notification)
 
     assert client.status_reply.call_args.kwargs["idempotency_key"] == "hypb-mention-629782824"
-    assert "outcome: replied" in notify.call_args.args[0]
+    assert "✅ <b>Replied</b>" in notify.call_args.args[0].html

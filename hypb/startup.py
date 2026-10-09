@@ -12,13 +12,16 @@ import os
 import socket
 from collections.abc import Mapping
 from datetime import datetime
+from urllib.parse import urlparse
+
+from hypb.telegram_message import TelegramMessage, bold, escape, italic
 
 
 def build_startup_message(
     env: Mapping[str, str] | None = None,
     now: datetime | None = None,
     hostname: str | None = None,
-) -> str:
+) -> TelegramMessage:
     """Describe this instance well enough to tell two deploys apart.
 
     IMAGE_TAG is the only meaningful version marker: the container runs one
@@ -29,12 +32,7 @@ def build_startup_message(
     now = datetime.now().astimezone() if now is None else now
     hostname = socket.gethostname() if hostname is None else hostname
 
-    return "\n".join(
-        [
-            "hypb mastodon replier started",
-            f"version: {env.get('IMAGE_TAG') or 'unknown'}",
-            f"instance: {env.get('MASTODON_BASE_URL') or 'unknown'}",
-            f"host: {hostname}",
-            f"started: {now.strftime('%Y-%m-%d %H:%M:%S %Z')}",
-        ]
-    )
+    version = env.get("IMAGE_TAG") or "unknown version"
+    instance = urlparse(env.get("MASTODON_BASE_URL") or "").netloc or "unknown instance"
+    details = f"{instance} · host {hostname} · {now.strftime('%Y-%m-%d %H:%M %Z')}"
+    return TelegramMessage(f"🟢 {bold('Replier started')} · {escape(version)}\n{italic(details)}")

@@ -16,6 +16,9 @@ from requests.exceptions import (
     Timeout as RequestsTimeout,
 )
 
+from hypb.alert_messages import warning_alert
+from hypb.telegram_message import TelegramMessage
+
 logger = logging.getLogger(__name__)
 
 #: Failures that mean "Mastodon could not be reached", never "the code is wrong".
@@ -46,7 +49,7 @@ class MentionPoller:
     def __init__(
         self,
         poll: Callable[[], None],
-        alert: Callable[[str], bool],
+        alert: Callable[[TelegramMessage], bool],
         *,
         policy: PollPolicy = PollPolicy(),
         sleep: Callable[[float], None] = time.sleep,
@@ -72,7 +75,7 @@ class MentionPoller:
                     failing_since = now
                 outage_seconds = now - failing_since
                 if not alerted and outage_seconds >= self._policy.alert_after_seconds:
-                    self._alert(f"mastodon mention poll failing for {outage_seconds / 60:.0f}m, still retrying. last failure: {e!r}")
+                    self._alert(warning_alert(f"Mention polling failing for {outage_seconds / 60:.0f}m · still retrying", repr(e)))
                     alerted = True
                 logger.warning("mention poll failed (%r); retrying in %.0fs", e, self._policy.interval_seconds)
             else:
