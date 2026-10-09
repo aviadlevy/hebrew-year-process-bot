@@ -6,6 +6,11 @@ services:
     env_file: .env
     environment:
       TZ: Asia/Jerusalem
+      STATE_DB_PATH: /var/lib/hypb/state.db
+    volumes:
+      # The mention cursor lives beside the progress post's state. The volume is
+      # created once by hand (docs/deployment.md section 9) and owned by uid 10001.
+      - hypb-state:/var/lib/hypb
     read_only: true
     tmpfs:
       - /tmp
@@ -19,3 +24,7 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+
+volumes:
+  hypb-state:
+    external: true

@@ -7,7 +7,6 @@ from tweepy.asynchronous import AsyncClient
 
 from hypb.async_stream_client_twitter import _AsyncStreamingClient
 from hypb.constant import TWITTER_USER_ID
-from hypb.stream_listener_mastodon import _StreamingListener
 
 
 def get_async_twitter_client():
@@ -24,10 +23,6 @@ def get_async_twitter_stream():
     return _AsyncStreamingClient(
         async_client=get_async_twitter_client(), user_id=TWITTER_USER_ID, bearer_token=os.environ["BEARER_TOKEN"], wait_on_rate_limit=True
     )
-
-
-def get_mastodon_stream_listener(mastodon_client):
-    return _StreamingListener(mastodon_client=mastodon_client)
 
 
 def get_mastodon_client():

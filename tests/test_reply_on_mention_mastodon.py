@@ -1,135 +1,64 @@
 import logging
-import random
+from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock, patch
-
-from mastodon import Mastodon
 
 from hypb.dates_helper import get_current_date, get_current_parashah
 from hypb.lang import get_eng_yom_tov, get_heb_yom_tov
+from hypb.mention_handler import MentionHandler
 from hypb.reply_on_mention_mastodon import main, reply
 from hypb.settings import REQUIRED_REPLIER_VARS
-from hypb.stream_listener_mastodon import _StreamingListener
-from hypb.utils import send_alert
+
+NOW = datetime(2026, 10, 9, 12, 0, 0, tzinfo=UTC)
 
 
-class dotdict(dict):
-    """dot.notation access to dictionary attributes"""
-    __getattr__ = dict.get
-    __setattr__ = dict.__setitem__
-    __delattr__ = dict.__delitem__
-
-
-def create_notification(message, status_id):
-    return dotdict({
-        "id": random.randint(0, 100),
+def base_flow(message):
+    """Push one fresh mention through the real handler and report what it replied."""
+    client = MagicMock()
+    handler = MentionHandler(client, MagicMock(), max_age=timedelta(minutes=30), now=lambda: NOW)
+    notification = {
+        "id": "1",
         "type": "mention",
-        "status": dotdict({
-            "content": message,
-            "id": status_id
-        })
-    })
+        "created_at": NOW,
+        "status": {"id": "7", "content": message},
+    }
+    handler.handle(notification)
+    return client.status_reply, notification["status"]
 
 
-class TestMastodon(Mastodon):
-    def __init__(self):
-        super().__init__(api_base_url="testApi")
+def test_date():
+    spy, status = base_flow("What's the date?")
+    assert spy.call_args.kwargs["to_status"] is status
+    assert spy.call_args.kwargs["status"] == f"The date is:\n{get_current_date(lang='eng')}"
 
 
-def base_flow(mocker, message):
-    mastodon: Mastodon = TestMastodon()
-    mocker.patch.object(mastodon, "status_reply")
-    spy = mocker.spy(mastodon, "status_reply")
-    stream_client = _StreamingListener(mastodon)
-    status_id = random.randint(0, 100)
-    notification = create_notification(message, status_id)
-    stream_client.on_notification(notification)
-    return spy, notification["status"]
+def test_date_heb():
+    spy, _ = base_flow("מה התאריך?")
+    assert spy.call_args.kwargs["status"] == f"התאריך הוא:\n{get_current_date(lang='heb')}"
 
 
-def test_date(mocker):
-    spy, notification_status = base_flow(mocker, "What's the date?")
-    spy.assert_called_once_with(to_status=notification_status, status=f"The date is:\n{get_current_date(lang='eng')}")
+def test_parashah():
+    spy, _ = base_flow("What's the parashah?")
+    assert spy.call_args.kwargs["status"] == f"The Parashah is {get_current_parashah(lang='eng')}"
 
 
-def test_date_heb(mocker):
-    spy, notification_status = base_flow(mocker, "מה התאריך?")
-    spy.assert_called_once_with(to_status=notification_status, status=f"התאריך הוא:\n{get_current_date(lang='heb')}")
+def test_parashah_heb():
+    spy, _ = base_flow("מה פרשת השבוע?")
+    assert spy.call_args.kwargs["status"] == f"פרשת השבוע היא פרשת {get_current_parashah(lang='heb')}"
 
 
-def test_parashah(mocker):
-    spy, notification_status = base_flow(mocker, "What's the parashah?")
-    spy.assert_called_once_with(to_status=notification_status,
-                                status=f"The Parashah is {get_current_parashah(lang='eng')}")
+def test_upcoming_holiday():
+    spy, _ = base_flow("What's the Yom Tov?")
+    assert spy.call_args.kwargs["status"] == get_eng_yom_tov()
 
 
-def test_parashah_heb(mocker):
-    spy, notification_status = base_flow(mocker, "מה פרשת השבוע?")
-    spy.assert_called_once_with(to_status=notification_status,
-                                status=f"פרשת השבוע היא פרשת {get_current_parashah(lang='heb')}")
+def test_upcoming_holiday_heb():
+    spy, _ = base_flow("מה החג הקרוב?")
+    assert spy.call_args.kwargs["status"] == get_heb_yom_tov()
 
 
-def test_upcoming_holiday(mocker):
-    spy, notification_status = base_flow(mocker, "What's the Yom Tov?")
-    spy.assert_called_once_with(to_status=notification_status,
-                                status=get_eng_yom_tov())
-
-
-def test_upcoming_holiday_heb(mocker):
-    spy, notification_status = base_flow(mocker, "מה החג הקרוב?")
-    spy.assert_called_once_with(to_status=notification_status,
-                                status=get_heb_yom_tov())
-
-
-def test_unsupported_command(mocker):
-    spy, _ = base_flow(mocker, "What's up dude?")
+def test_unsupported_command():
+    spy, _ = base_flow("What's up dude?")
     spy.assert_not_called()
-
-
-def test_mention_and_reply_are_logged(mocker, caplog):
-    """`docker logs` is the only window into what the replier is doing.
-
-    Without these lines a mention that produced no reply is indistinguishable
-    from one that never arrived, which is the case worth debugging.
-    """
-    with caplog.at_level(logging.INFO, logger="hypb.stream_listener_mastodon"):
-        _, status = base_flow(mocker, "What's the date?")
-
-    logged = caplog.text
-    assert f"status_id={status['id']}" in logged
-    assert "What's the date?".lower() in logged.lower()
-    assert "replying to status_id" in logged
-
-
-def test_unmatched_mention_says_why_it_was_ignored(mocker, caplog):
-    with caplog.at_level(logging.INFO, logger="hypb.stream_listener_mastodon"):
-        base_flow(mocker, "What's up dude?")
-
-    assert "no keyword matched" in caplog.text
-
-
-def test_non_mention_notification_is_logged_and_ignored(mocker, caplog):
-    listener = _StreamingListener(MagicMock())
-    notification = create_notification("hello", status_id=1)
-    notification["type"] = "favourite"
-
-    with caplog.at_level(logging.INFO, logger="hypb.stream_listener_mastodon"):
-        assert listener.on_notification(notification) is None
-
-    assert "type=favourite" in caplog.text
-
-
-def test_failure_to_reply_is_logged_with_a_traceback(mocker, caplog):
-    """An alert alone loses the stack; the log has to keep it."""
-    mastodon = MagicMock()
-    mastodon.status_reply.side_effect = RuntimeError("boom")
-    mocker.patch("hypb.stream_listener_mastodon.send_alert")
-    listener = _StreamingListener(mastodon)
-
-    with caplog.at_level(logging.ERROR, logger="hypb.stream_listener_mastodon"):
-        listener.on_notification(create_notification("What's the date?", status_id=7))
-
-    assert "failed to handle mention" in caplog.text
-    assert "RuntimeError: boom" in caplog.text
 
 
 def test_main_returns_2_on_missing_config(monkeypatch, mocker):
@@ -176,32 +105,6 @@ def test_debug_logging_never_enables_urllib3_request_logging(monkeypatch, mocker
     assert not logging.getLogger("urllib3").isEnabledFor(logging.DEBUG)
 
 
-def test_reply_supervises_the_stream_instead_of_exiting_when_it_drops():
-    """A dropped or cleanly-closed stream must reconnect, not end the process.
-
-    mastodon.social recycles long-lived SSE connections; the blocking
-    stream_user() cannot recover from that by itself, so it used to exit 1 and
-    fire a Telegram alert on an entirely expected event. reply() now hands the
-    stream to StreamSupervisor, which reconnects in place — see
-    tests/test_stream_supervisor.py for the retry and alerting behaviour.
-    """
-    mastodon_client = MagicMock()
-    listener = MagicMock()
-    with (
-        patch("hypb.reply_on_mention_mastodon.get_mastodon_client", return_value=mastodon_client),
-        patch("hypb.reply_on_mention_mastodon.get_mastodon_stream_listener", return_value=listener),
-        patch("hypb.reply_on_mention_mastodon.StreamSupervisor") as supervisor_cls,
-    ):
-        reply()
-
-    supervisor_cls.return_value.run.assert_called_once_with()
-    kwargs = supervisor_cls.call_args.kwargs
-    assert kwargs["alert"] is send_alert, "the supervisor must page through the same alerting path as main()"
-
-    kwargs["run_stream"]()
-    mastodon_client.stream_user.assert_called_once_with(listener)
-
-
 def test_main_returns_1_and_alerts_when_reply_raises(monkeypatch, mocker):
     """When reply() blows up, main() must log it, alert, and return 1.
 
@@ -220,115 +123,66 @@ def test_main_returns_1_and_alerts_when_reply_raises(monkeypatch, mocker):
     assert send_alert.called
 
 
-class FakeStreamResponse:
-    """Replays a raw byte stream the way requests' iter_content does."""
+def test_reply_polls_the_feed_through_the_handler_with_the_configured_limits():
+    """reply() wires the persistent cursor, the feed, the handler and the poller together."""
+    client = MagicMock()
+    with (
+        patch("hypb.reply_on_mention_mastodon.get_mastodon_client", return_value=client),
+        patch("hypb.reply_on_mention_mastodon.MentionCursor") as cursor_cls,
+        patch("hypb.reply_on_mention_mastodon.MentionFeed") as feed_cls,
+        patch("hypb.reply_on_mention_mastodon.MentionHandler") as handler_cls,
+        patch("hypb.reply_on_mention_mastodon.MentionPoller") as poller_cls,
+    ):
+        reply(max_age=timedelta(minutes=45), poll_interval_seconds=12.0)
 
-    def __init__(self, payload: bytes):
-        self.payload = payload
+    feed_cls.assert_called_once_with(client, cursor_cls.return_value)
+    handler_cls.assert_called_once()
+    assert handler_cls.call_args.kwargs["max_age"] == timedelta(minutes=45)
+    assert poller_cls.call_args.kwargs["policy"].interval_seconds == 12.0
+    poller_cls.return_value.run.assert_called_once_with()
 
-    def iter_content(self, chunk_size=1):
-        for byte in self.payload:
-            yield bytes([byte])
-
-
-# mastodon.social sends a keepalive roughly every 15 seconds: a comment line
-# starting with ':', then the blank line that terminates the SSE block.
-HEARTBEAT = b":thump\n\n"
-
-
-def test_heartbeat_does_not_abort_the_stream():
-    """A keepalive must not kill the replier.
-
-    mastodon-py 1.8.1 raised MastodonMalformedEventError on the blank line that
-    ends a keepalive, which killed the replier roughly every 15 seconds; we
-    carried a `_dispatch` override to guard against it. 2.2.0 fixed it upstream,
-    so this test now pins the library's behaviour: if an upgrade or downgrade
-    brings the bug back, it fails here rather than in production.
-    """
-    listener = _StreamingListener(mastodon_client=MagicMock())
-
-    listener.handle_stream(FakeStreamResponse(HEARTBEAT))
+    # What the poller runs each tick is the feed, handing mentions to the handler.
+    poll = poller_cls.call_args.args[0]
+    poll()
+    feed_cls.return_value.process_new.assert_called_once_with(handler_cls.return_value.handle)
 
 
-def test_real_event_still_dispatches_after_a_heartbeat():
-    """Skipping the empty keepalive event must not swallow real ones."""
-    listener = _StreamingListener(mastodon_client=MagicMock())
-    received = []
-    listener.on_update = received.append
+def test_main_passes_the_environment_settings_to_reply(monkeypatch, mocker):
+    for var in REQUIRED_REPLIER_VARS:
+        monkeypatch.setenv(var, "test-value")
+    monkeypatch.setenv("MENTION_MAX_AGE_MINUTES", "10")
+    monkeypatch.setenv("POLL_INTERVAL_SECONDS", "15")
+    mocker.patch("hypb.reply_on_mention_mastodon.send_alert")
+    reply_mock = mocker.patch("hypb.reply_on_mention_mastodon.reply", side_effect=RuntimeError("stop"))
 
-    payload = HEARTBEAT + b'event: update\ndata: {"content": "hello"}\n\n'
-    listener.handle_stream(FakeStreamResponse(payload))
+    main()
 
-    assert len(received) == 1, "the real update event was not dispatched"
-    assert received[0]["content"] == "hello"
-
-
-def _listener_with_notifier(mastodon=None):
-    notify = MagicMock(return_value=True)
-    return _StreamingListener(mastodon or MagicMock(), notify=notify), notify
+    reply_mock.assert_called_once_with(timedelta(minutes=10), 15.0)
 
 
-def test_replied_mention_is_notified_with_its_outcome():
-    listener, notify = _listener_with_notifier()
+def test_main_defaults_to_thirty_minutes_and_thirty_seconds(monkeypatch, mocker):
+    for var in REQUIRED_REPLIER_VARS:
+        monkeypatch.setenv(var, "test-value")
+    monkeypatch.delenv("MENTION_MAX_AGE_MINUTES", raising=False)
+    monkeypatch.delenv("POLL_INTERVAL_SECONDS", raising=False)
+    mocker.patch("hypb.reply_on_mention_mastodon.send_alert")
+    reply_mock = mocker.patch("hypb.reply_on_mention_mastodon.reply", side_effect=RuntimeError("stop"))
 
-    listener.on_notification(create_notification("What's the date?", status_id=1))
+    main()
 
-    notify.assert_called_once()
-    message = notify.call_args.args[0]
-    assert message.startswith("mastodon mention")
-    assert "What's the date?" in message
-    assert "outcome: replied" in message
-
-
-def test_unmatched_mention_is_notified_as_not_replied():
-    listener, notify = _listener_with_notifier()
-
-    listener.on_notification(create_notification("What's up dude?", status_id=1))
-
-    assert "outcome: not replied (no keyword matched)" in notify.call_args.args[0]
+    reply_mock.assert_called_once_with(timedelta(minutes=30), 30.0)
 
 
-def test_failed_mention_is_notified_as_failed():
-    mastodon = MagicMock()
-    mastodon.status_reply.side_effect = RuntimeError("boom")
-    listener, notify = _listener_with_notifier(mastodon)
+def test_main_returns_2_on_a_bad_tuning_value(monkeypatch, mocker, caplog):
+    """A typo in the age limit must stop the start, not run with an unintended cutoff."""
+    for var in REQUIRED_REPLIER_VARS:
+        monkeypatch.setenv(var, "test-value")
+    monkeypatch.setenv("MENTION_MAX_AGE_MINUTES", "thirty")
+    mocker.patch("hypb.reply_on_mention_mastodon.send_alert")
+    reply_mock = mocker.patch("hypb.reply_on_mention_mastodon.reply")
 
-    listener.on_notification(create_notification("What's the date?", status_id=1))
+    with caplog.at_level(logging.ERROR):
+        assert main() == 2
 
-    assert "outcome: failed: RuntimeError('boom')" in notify.call_args.args[0]
-
-
-def test_non_mention_is_not_notified():
-    listener, notify = _listener_with_notifier()
-    notification = create_notification("hello", status_id=1)
-    notification["type"] = "favourite"
-
-    listener.on_notification(notification)
-
-    notify.assert_not_called()
-
-
-def test_notifier_failure_does_not_lose_the_reply():
-    mastodon = MagicMock()
-    listener = _StreamingListener(mastodon, notify=MagicMock(return_value=False))
-
-    listener.on_notification(create_notification("What's the date?", status_id=1))
-
-    mastodon.status_reply.assert_called_once()
-
-
-def test_default_notifier_is_the_telegram_alert(no_telegram):
-    listener = _StreamingListener(MagicMock())
-
-    listener.on_notification(create_notification("What's the date?", status_id=1))
-
-    no_telegram.assert_called_once()
-
-
-def test_every_stream_event_is_logged_at_debug(caplog):
-    listener = _StreamingListener(mastodon_client=MagicMock())
-
-    with caplog.at_level(logging.DEBUG, logger="hypb.stream_listener_mastodon"):
-        listener.handle_stream(FakeStreamResponse(b'event: update\ndata: {"content": "hello"}\n\n'))
-
-    assert "stream event: update" in caplog.text
+    assert "MENTION_MAX_AGE_MINUTES" in caplog.text
+    reply_mock.assert_not_called()
