@@ -239,14 +239,11 @@ HEARTBEAT = b":thump\n\n"
 def test_heartbeat_does_not_abort_the_stream():
     """A keepalive must not kill the replier.
 
-    mastodon-py 1.8.1's _parse_line() calls handle_heartbeat() for a ':' comment
-    and returns the event dict untouched — still empty. The blank line that
-    follows then reaches _dispatch({}), which reads event['event'] and raises
-    MastodonMalformedEventError. Upstream fixed this in 2.x by guarding
-    _dispatch with `if not event: return`; we backport that guard.
-
-    Without the guard this crashes the process roughly every 15 seconds, so the
-    always-on replier can never stay up.
+    mastodon-py 1.8.1 raised MastodonMalformedEventError on the blank line that
+    ends a keepalive, which killed the replier roughly every 15 seconds; we
+    carried a `_dispatch` override to guard against it. 2.2.0 fixed it upstream,
+    so this test now pins the library's behaviour: if an upgrade or downgrade
+    brings the bug back, it fails here rather than in production.
     """
     listener = _StreamingListener(mastodon_client=MagicMock())
 
@@ -254,11 +251,7 @@ def test_heartbeat_does_not_abort_the_stream():
 
 
 def test_real_event_still_dispatches_after_a_heartbeat():
-    """The guard must skip only empty events, never real ones.
-
-    A guard that swallowed everything would make this test the only thing
-    standing between a silent bot and nobody noticing.
-    """
+    """Skipping the empty keepalive event must not swallow real ones."""
     listener = _StreamingListener(mastodon_client=MagicMock())
     received = []
     listener.on_update = received.append
@@ -330,3 +323,12 @@ def test_default_notifier_is_the_telegram_alert(no_telegram):
     listener.on_notification(create_notification("What's the date?", status_id=1))
 
     no_telegram.assert_called_once()
+
+
+def test_every_stream_event_is_logged_at_debug(caplog):
+    listener = _StreamingListener(mastodon_client=MagicMock())
+
+    with caplog.at_level(logging.DEBUG, logger="hypb.stream_listener_mastodon"):
+        listener.handle_stream(FakeStreamResponse(b'event: update\ndata: {"content": "hello"}\n\n'))
+
+    assert "stream event: update" in caplog.text
