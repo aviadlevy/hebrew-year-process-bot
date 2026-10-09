@@ -27,5 +27,6 @@ def error_alert(title: str, error: BaseException) -> TelegramMessage:
     return TelegramMessage(f"🚨 {bold(title)}\n{error_line(error)}", details=format_traceback(error))
 
 
-def warning_alert(title: str, detail: str) -> TelegramMessage:
-    return TelegramMessage(f"⚠️ {bold(title)}\n{code(truncate(detail, MAX_ERROR_CHARS))}")
+def warning_alert(title: str, error: BaseException) -> TelegramMessage:
+    """Like an error alert, for something still being retried."""
+    return TelegramMessage(f"⚠️ {bold(title)}\n{error_line(error)}", details=format_traceback(error))

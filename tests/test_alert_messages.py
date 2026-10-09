@@ -50,7 +50,15 @@ def test_an_error_that_was_never_raised_still_formats():
     assert "RuntimeError: no traceback" in message.html
 
 
-def test_a_warning_has_a_title_and_a_detail():
-    message = warning_alert("Mention polling failing for 5m · still retrying", "MastodonNetworkError('down')")
+def test_a_warning_has_a_title_the_error_and_its_traceback():
+    message = warning_alert("Mention polling failing for 5m · still retrying", _raised(RuntimeError("down")))
 
-    assert message.html == "⚠️ <b>Mention polling failing for 5m · still retrying</b>\n<code>MastodonNetworkError(&#x27;down&#x27;)</code>"
+    assert message.html.startswith("⚠️ <b>Mention polling failing for 5m · still retrying</b>\n<code>RuntimeError(&#x27;down&#x27;)</code>")
+    assert "<blockquote expandable>Traceback" in message.html
+
+
+def test_a_warning_keeps_the_root_cause_of_a_long_nested_error():
+    """For a requests error the cause ('Connection refused') is at the end of a long repr."""
+    error = _raised(ConnectionError("HTTPSConnectionPool(host='mastodon.social'): " + "x" * 400 + " Connection refused"))
+
+    assert warning_alert("Polling failing", error).html.endswith("Connection refused</blockquote>")

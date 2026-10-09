@@ -121,3 +121,10 @@ def test_details_are_dropped_when_the_body_alone_fills_the_message():
     body = code("x" * MAX_MESSAGE_UNITS)
 
     assert TelegramMessage(body, details="traceback").html == body
+
+
+def test_details_that_would_get_only_a_sliver_of_room_are_dropped():
+    """A few characters of a traceback help nobody; the body is sent whole instead."""
+    body = code("x" * (MAX_MESSAGE_UNITS - 20))
+
+    assert TelegramMessage(body, details="Traceback ...\n" * 50).html == body

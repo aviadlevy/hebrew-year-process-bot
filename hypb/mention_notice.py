@@ -15,6 +15,7 @@ from hypb.telegram_message import (
     bold,
     escape,
     is_web_url,
+    italic,
     link,
     quote,
 )
@@ -32,6 +33,10 @@ _UNKNOWN = "unknown"
 _LEADING_MENTIONS = re.compile(r"^(?:@\S+\s+)+")
 
 
+#: Tags that separate words even when no space is written around them.
+_BREAKING_TAGS = {"br", "p"}
+
+
 class _TextExtractor(HTMLParser):
     def __init__(self):
         super().__init__(convert_charrefs=True)
@@ -39,6 +44,14 @@ class _TextExtractor(HTMLParser):
 
     def handle_data(self, data):
         self._chunks.append(data)
+
+    def handle_starttag(self, tag, attrs):
+        if tag in _BREAKING_TAGS:
+            self._chunks.append(" ")
+
+    def handle_endtag(self, tag):
+        if tag in _BREAKING_TAGS:
+            self._chunks.append(" ")
 
     @property
     def text(self) -> str:
@@ -77,7 +90,8 @@ def build_mention_notice(notification, outcome: MentionOutcome) -> TelegramMessa
     account = notification.get("account") or {}
     question = truncate(_question(status.get("content") or ""), MAX_NOTICE_TEXT_CHARS)
 
-    lines = [_header(status, outcome), _sender(account), quote(question), *outcome.lines()]
+    question_line = quote(question) if question else italic("(no text)")
+    lines = [_header(status, outcome), _sender(account), question_line, *outcome.lines()]
     url = status.get("url")
     button = LinkButton("Open on Mastodon ↗", url) if is_web_url(url) else None
     return TelegramMessage("\n".join(lines), details=outcome.details(), button=button)

@@ -125,3 +125,23 @@ def test_a_profile_or_toot_url_that_is_not_a_web_link_is_not_made_clickable():
 
     assert "href" not in message.html
     assert message.button is None
+
+
+def test_a_handle_followed_by_a_line_break_is_still_dropped():
+    """No space before the <br>: the text must not glue into '@yearProgressHebwhat'."""
+    message = build_mention_notice(_notification(content=f"<p>{BOT_MENTION}<br />what is the date?</p>"), NoKeyword())
+
+    assert "<blockquote>what is the date?</blockquote>" in message.html
+
+
+def test_paragraphs_do_not_glue_together():
+    message = build_mention_notice(_notification(content="<p>hi</p><p>second</p>"), NoKeyword())
+
+    assert "<blockquote>hi second</blockquote>" in message.html
+
+
+def test_a_mention_with_no_text_says_so_instead_of_an_empty_quote():
+    message = build_mention_notice(_notification(content=""), NoKeyword())
+
+    assert "<blockquote></blockquote>" not in message.html
+    assert "<i>(no text)</i>" in message.html

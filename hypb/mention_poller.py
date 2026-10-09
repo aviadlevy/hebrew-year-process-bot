@@ -75,7 +75,7 @@ class MentionPoller:
                     failing_since = now
                 outage_seconds = now - failing_since
                 if not alerted and outage_seconds >= self._policy.alert_after_seconds:
-                    self._alert(warning_alert(f"Mention polling failing for {outage_seconds / 60:.0f}m · still retrying", repr(e)))
+                    self._alert(warning_alert(f"Mention polling failing for {outage_seconds / 60:.0f}m · still retrying", e))
                     alerted = True
                 logger.warning("mention poll failed (%r); retrying in %.0fs", e, self._policy.interval_seconds)
             else:

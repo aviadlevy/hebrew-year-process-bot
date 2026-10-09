@@ -36,3 +36,10 @@ def test_keep_end_never_splits_a_surrogate_pair():
 
     assert trimmed.encode("utf-16-le").decode("utf-16-le") == trimmed
     assert trimmed.endswith("😀")
+
+
+def test_keep_end_never_exceeds_a_limit_too_small_for_its_notice():
+    trimmed = keep_end("a" * 1000 + "end", 10)
+
+    assert utf16_len(trimmed) <= 10
+    assert trimmed.endswith("end")

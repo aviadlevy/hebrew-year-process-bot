@@ -25,6 +25,10 @@ MAX_MESSAGE_UNITS = 4096
 
 _TAG = re.compile(r"<[^>]+>")
 
+#: Collapsed details are dropped rather than squeezed below this many UTF-16
+#: units: a few lines of a traceback help nobody.
+MIN_DETAILS_UNITS = 200
+
 
 def escape(text: str) -> str:
     return html.escape(text, quote=True)
@@ -99,7 +103,7 @@ class TelegramMessage:
             return self.body
         # One unit for the newline between the body and the collapsed quote.
         room = MAX_MESSAGE_UNITS - utf16_len(visible_text(self.body)) - 1
-        if room <= 0:
+        if room < MIN_DETAILS_UNITS:
             return self.body
         return f"{self.body}\n<blockquote expandable>{escape(keep_end(self.details, room))}</blockquote>"
 
