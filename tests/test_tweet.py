@@ -1,4 +1,4 @@
-import datetime
+import datetime as dt
 import random
 
 import pytest
@@ -26,10 +26,10 @@ should_tweet_test_data = [
 ]
 
 is_holiday_tweeted_today_test_data = [
-    ([get_status(text="Happy Hanukkah!", created_at=datetime.datetime.today())], "Hanukkah", True),
-    ([get_status(text="Happy Hanukkah!", created_at=datetime.datetime.today() - datetime.timedelta(days=1))],
+    ([get_status(text="Happy Hanukkah!", created_at=dt.datetime.today())], "Hanukkah", True),
+    ([get_status(text="Happy Hanukkah!", created_at=dt.datetime.today() - dt.timedelta(days=1))],
      "Hanukkah", False),
-    ([get_status(text="Happy Pesach!", created_at=datetime.datetime.today())], "Hanukkah", False),
+    ([get_status(text="Happy Pesach!", created_at=dt.datetime.today())], "Hanukkah", False),
 ]
 
 get_last_state_test_data = [
